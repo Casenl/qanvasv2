@@ -1,15 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Package, Search, Settings, Layers, Camera } from 'lucide-react';
+import { Package, Search, Settings, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PropositionType, Proposition, Product, Vendor, Solution } from '@/lib/types';
 import { CanvasConfiguration } from '@/lib/types/canvasConfig';
 import { DraggableSidebarItem } from './DraggableSidebarItem';
 import { SidebarSection } from './SidebarSection';
 import { ConfigurationPanel } from './ConfigurationPanel';
-import { SnapshotManager } from './SnapshotManager';
-import { CanvasSnapshot } from '@/lib/types/snapshot';
 
 interface CanvasSidebarProps {
     searchQuery: string;
@@ -23,15 +21,9 @@ interface CanvasSidebarProps {
     getVendorName: (vendorId: string) => string | undefined;
     canvasConfig: CanvasConfiguration;
     onConfigChange: (config: CanvasConfiguration) => void;
-    snapshots: CanvasSnapshot[];
-    currentSnapshotId?: string;
-    onCreateSnapshot: (name: string, description?: string) => void;
-    onLoadSnapshot: (snapshotId: string) => void;
-    onDeleteSnapshot: (snapshotId: string) => void;
-    onCompareSnapshots: (fromId: string, toId: string) => void;
 }
 
-type TabType = 'products' | 'solutions' | 'snapshots' | 'configuration';
+type TabType = 'products' | 'solutions' | 'configuration';
 
 export function CanvasSidebar({
     searchQuery,
@@ -44,13 +36,7 @@ export function CanvasSidebar({
     vendors,
     getVendorName,
     canvasConfig,
-    onConfigChange,
-    snapshots,
-    currentSnapshotId,
-    onCreateSnapshot,
-    onLoadSnapshot,
-    onDeleteSnapshot,
-    onCompareSnapshots
+    onConfigChange
 }: CanvasSidebarProps) {
     const [activeTab, setActiveTab] = useState<TabType>('products');
     const [selectedVendor, setSelectedVendor] = useState<string | 'all'>('all');
@@ -119,17 +105,7 @@ export function CanvasSidebar({
                         >
                             <Package className="w-4 h-4" />
                         </button>
-                        <button
-                            onClick={() => setActiveTab('snapshots')}
-                            className="flex-1 flex items-center justify-center p-2 rounded-md transition-all"
-                            style={{
-                                backgroundColor: activeTab === 'snapshots' ? 'var(--color-surface)' : 'transparent',
-                                color: activeTab === 'snapshots' ? 'var(--color-text)' : 'var(--color-text-muted)'
-                            }}
-                            title="Snapshots"
-                        >
-                            <Camera className="w-4 h-4" />
-                        </button>
+
                         <button
                             onClick={() => setActiveTab('configuration')}
                             className="flex-1 flex items-center justify-center p-2 rounded-md transition-all"
@@ -285,16 +261,7 @@ export function CanvasSidebar({
                     </div>
                 )}
 
-                {activeTab === 'snapshots' && (
-                    <SnapshotManager
-                        snapshots={snapshots}
-                        currentSnapshotId={currentSnapshotId}
-                        onCreateSnapshot={onCreateSnapshot}
-                        onLoadSnapshot={onLoadSnapshot}
-                        onDeleteSnapshot={onDeleteSnapshot}
-                        onCompareSnapshots={onCompareSnapshots}
-                    />
-                )}
+
 
                 {activeTab === 'configuration' && (
                     <ConfigurationPanel

@@ -123,10 +123,13 @@ export function CanvasWorkspace({
             multiSelect.clearSelection();
         }
         const rect = canvasRef.current?.getBoundingClientRect();
-        if (rect) {
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            multiSelect.startBoxSelection(x, y);
+        if (rect && canvasTransform) {
+            // Convert screen coordinates to canvas coordinates
+            const screenX = e.clientX - rect.left;
+            const screenY = e.clientY - rect.top;
+            const canvasX = (screenX - canvasTransform.pan.x) / canvasTransform.zoom;
+            const canvasY = (screenY - canvasTransform.pan.y) / canvasTransform.zoom;
+            multiSelect.startBoxSelection(canvasX, canvasY);
         }
     };
 
@@ -151,10 +154,13 @@ export function CanvasWorkspace({
         // Handle box selection
         if (multiSelect.isSelecting) {
             const rect = canvasRef.current?.getBoundingClientRect();
-            if (rect) {
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                multiSelect.updateBoxSelection(x, y);
+            if (rect && canvasTransform) {
+                // Convert screen coordinates to canvas coordinates
+                const screenX = e.clientX - rect.left;
+                const screenY = e.clientY - rect.top;
+                const canvasX = (screenX - canvasTransform.pan.x) / canvasTransform.zoom;
+                const canvasY = (screenY - canvasTransform.pan.y) / canvasTransform.zoom;
+                multiSelect.updateBoxSelection(canvasX, canvasY);
             }
         }
     };
@@ -170,6 +176,7 @@ export function CanvasWorkspace({
         if (multiSelect.isSelecting && multiSelect.selectionBox) {
             const box = multiSelect.selectionBox;
 
+            // Box is now in canvas coordinates, items are also in canvas coordinates
             const itemsInBox = items.filter(item => {
                 const itemWidth = 300; // Updated to match actual card width
                 const itemHeight = 172; // Updated to match actual card height
@@ -282,7 +289,7 @@ export function CanvasWorkspace({
             {/* Layer 2: Fixed UI Overlays (NOT affected by zoom/pan) */}
             <div className="absolute inset-0 pointer-events-none">
                 {/* Selection Box */}
-                <SelectionBox box={multiSelect.selectionBox} />
+                <SelectionBox box={multiSelect.selectionBox} canvasTransform={canvasTransform} />
 
                 {/* Snap Guides */}
                 <div className="absolute inset-0 overflow-hidden z-40">

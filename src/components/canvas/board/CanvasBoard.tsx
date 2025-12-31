@@ -16,7 +16,7 @@ import {
     rectIntersection,
 } from '@dnd-kit/core';
 import { createPortal } from 'react-dom';
-import { Package, Layout, Copy, Trash2, Users, Lock, Unlock, Ungroup } from 'lucide-react'; // Combined imports for lucide-react
+import { Package, Layout } from 'lucide-react'; // Combined imports for lucide-react
 
 import { PropositionType, Proposition, Vendor, Product, Solution, CanvasItem } from '@/lib/types';
 import { CanvasSidebar } from '../CanvasSidebar';
@@ -28,7 +28,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useSnapGuides } from '@/hooks/useSnapGuides';
 import { useModifierKeys } from '@/hooks/useModifierKeys';
 import { useHistory } from '@/hooks/useHistory';
-import { ContextMenu, ContextMenuAction } from '../controls/ContextMenu';
+import { ContextMenu } from '../controls/ContextMenu';
 import { AlignmentToolbar } from '../controls/AlignmentToolbar';
 import { ThemeToggle } from '../controls/ThemeToggle';
 import { AxisLockIndicator } from '../controls/AxisLockIndicator';
@@ -41,7 +41,11 @@ import { useItemNudging } from '@/hooks/useItemNudging';
 import { useItemLocking } from '@/hooks/useItemLocking';
 import { useAlignment } from '@/hooks/useAlignment';
 import { useClipboard } from '@/hooks/useClipboard';
+import { useContextMenu } from '@/hooks/useContextMenu';
 import { useCanvasTransform } from '@/hooks/useCanvasTransform';
+import { useSnapshotManager } from '@/hooks/useSnapshotManager';
+import { useSolutionManager } from '@/hooks/useSolutionManager';
+import { useMetricManager } from '@/hooks/useMetricManager';
 import { ZoomControls } from '../controls/ZoomControls';
 import { SolutionDialog } from '../dialogs/SolutionDialog';
 import { CanvasConfiguration, DEFAULT_CANVAS_CONFIG } from '@/lib/types/canvasConfig';
@@ -77,37 +81,17 @@ export function CanvasBoard() {
 
     const canvasRef = useRef<HTMLDivElement>(null);
 
-    // Context Menu State
-    const [contextMenu, setContextMenu] = useState<{ x: number, y: number, visible: boolean }>({ x: 0, y: 0, visible: false });
-
-    // Clipboard State
-
     // Theme hook
     const { theme, toggleTheme, isDark } = useTheme();
 
     // Color scheme toggle
     const [colorSchemeEnabled, setColorSchemeEnabled] = useState(true);
 
-    // Solutions state
-    const [solutions, setSolutions] = useState<Solution[]>(SOLUTIONS);
-    const [showSolutionDialog, setShowSolutionDialog] = useState(false);
-
     // Canvas configuration state
     const [canvasConfig, setCanvasConfig] = useState<CanvasConfiguration>(DEFAULT_CANVAS_CONFIG);
 
     // Track previous config to avoid unnecessary syncs
     const prevCanvasConfigRef = useRef<CanvasConfiguration>(DEFAULT_CANVAS_CONFIG);
-
-    // Snapshots state
-    const [snapshots, setSnapshots] = useState<CanvasSnapshot[]>([]);
-    const [currentSnapshotId, setCurrentSnapshotId] = useState<string | undefined>();
-    const [showComparison, setShowComparison] = useState(false);
-    const [comparisonData, setComparisonData] = useState<{
-        comparison: SnapshotComparison;
-        fromName: string;
-        toName: string;
-    } | null>(null);
-
 
     // Multi-select hook
     const multiSelect = useMultiSelect();
@@ -116,12 +100,20 @@ export function CanvasBoard() {
     const keys = useModifierKeys();
 
     // Calculate snap guides based on current drag state (after multiSelect is defined)
+    // Only exclude items that are being dragged together (multi-select drag)
+    // If dragging a single item, it should snap to ALL other items (including selected ones)
+    const itemsBeingDragged = dragState?.id
+        ? (multiSelect.selectedIds.includes(dragState.id) && multiSelect.selectedIds.length > 1
+            ? multiSelect.selectedIds // Multi-select: exclude all selected items
+            : [dragState.id]) // Single item: only exclude the dragged item
+        : [];
+
     const { x: snappedX, y: snappedY, guides: snapGuides } = useSnapGuides(
         dragState?.id ?? null,
         dragState ? { x: dragState.x, y: dragState.y, width: dragState.width, height: dragState.height } : null,
         items,
         true, // enabled
-        Array.from(multiSelect.selectedIds) // exclude selected items from snap calculations
+        itemsBeingDragged // exclude only items being dragged together
     );
 
     // Item nudging hook
@@ -157,141 +149,42 @@ export function CanvasBoard() {
         setDebugInfo
     });
 
-    // Solution handlers
-    const handleCreateSolution = () => {
-        if (multiSelect.selectedIds.length < 2) return;
-        setShowSolutionDialog(true);
-    };
+    // Context menu hook
+    const contextMenuOps = useContextMenu({
+        items,
+        setItems,
+        selectedIds: new Set(multiSelect.selectedIds),
+        clearSelection: multiSelect.clearSelection,
+        setDebugInfo,
+        clipboardCopy: clipboardOps.copy
+    });
 
-    const handleSaveSolution = (solutionData: {
-        name: string;
-        description: string;
-        productIds: string[];
-        metadata?: { licenses?: number; users?: number };
-    }) => {
-        // Get selected canvas items with their positions
-        const selectedItems = items.filter(item =>
-            multiSelect.selectedIds.includes(item.id) && item.entityType === 'product'
-        );
+    // Snapshot management hook
+    const snapshotManager = useSnapshotManager({
+        items,
+        canvasConfig,
+        setItems,
+        setCanvasConfig,
+        setDebugInfo
+    });
 
-        if (selectedItems.length === 0) return;
+    // Solution management hook
+    const solutionManager = useSolutionManager({
+        items,
+        setItems,
+        selectedIds: new Set(multiSelect.selectedIds),
+        setDebugInfo,
+        initialSolutions: SOLUTIONS
+    });
 
-        // Calculate anchor point (top-left of bounding box)
-        const minX = Math.min(...selectedItems.map(item => item.x));
-        const minY = Math.min(...selectedItems.map(item => item.y));
+    // Metric management hook
+    const metricManager = useMetricManager({
+        items,
+        setItems,
+        canvasConfig,
+        setDebugInfo
+    });
 
-        // Create product snapshots with relative positions
-        const productSnapshots = selectedItems.map(item => ({
-            productId: item.entityId,
-            relativeX: item.x - minX,
-            relativeY: item.y - minY,
-            config: {
-                // Per-product config can be added here later
-                licenses: undefined,
-                users: undefined
-            }
-        }));
-
-        const newSolution: Solution = {
-            id: `s-${Date.now()}`,
-            name: solutionData.name,
-            description: solutionData.description,
-            productIds: solutionData.productIds, // For backward compatibility
-            products: productSnapshots,
-            metadata: solutionData.metadata
-        };
-
-        setSolutions(prev => [...prev, newSolution]);
-        setDebugInfo(`Solution "${newSolution.name}" created with ${productSnapshots.length} products`);
-        setShowSolutionDialog(false);
-    };
-
-    // Get selected products for solution dialog
-    const getSelectedProducts = (): Product[] => {
-        return multiSelect.selectedIds
-            .map(id => {
-                const item = items.find(i => i.id === id);
-                if (!item || item.entityType !== 'product') return null;
-                return PRODUCTS.find(p => p.id === item.entityId);
-            })
-            .filter((p): p is Product => p !== null);
-    };
-
-    // Metric handlers
-    const handleMetricChange = (itemId: string, metricKey: string, value: number) => {
-        setItems(prev => prev.map(item => {
-            if (item.id !== itemId || !item.productConfig) return item;
-
-            return {
-                ...item,
-                productConfig: updateMetricManually(item.productConfig, metricKey, value)
-            };
-        }));
-        setDebugInfo(`Updated ${metricKey} to ${value}`);
-    };
-
-    const handleMetricReset = (itemId: string, metricKey: string) => {
-        setItems(prev => prev.map(item => {
-            if (item.id !== itemId || !item.productConfig) return item;
-
-            return {
-                ...item,
-                productConfig: resetMetricToInherited(item.productConfig, metricKey, canvasConfig)
-            };
-        }));
-        setDebugInfo(`Reset ${metricKey} to inherited value`);
-    };
-
-    // Snapshot handlers
-    const handleCreateSnapshot = useCallback((name: string, description?: string) => {
-        const snapshot = createSnapshot(name, items, canvasConfig, description);
-        setSnapshots(prev => [...prev, snapshot]);
-        setCurrentSnapshotId(snapshot.id);
-        setDebugInfo(`Created snapshot: ${name}`);
-        console.log('📸 Snapshot created:', snapshot);
-    }, [items, canvasConfig]);
-
-    const handleLoadSnapshot = useCallback((snapshotId: string) => {
-        const snapshot = snapshots.find(s => s.id === snapshotId);
-        if (!snapshot) {
-            console.error('Snapshot not found:', snapshotId);
-            return;
-        }
-
-        setItems(snapshot.items);
-        setCanvasConfig(snapshot.canvasConfig);
-        setCurrentSnapshotId(snapshotId);
-        setDebugInfo(`Loaded snapshot: ${snapshot.name}`);
-        console.log('📂 Snapshot loaded:', snapshot);
-    }, [snapshots]);
-
-    const handleDeleteSnapshot = useCallback((snapshotId: string) => {
-        setSnapshots(prev => prev.filter(s => s.id !== snapshotId));
-        if (currentSnapshotId === snapshotId) {
-            setCurrentSnapshotId(undefined);
-        }
-        setDebugInfo(`Deleted snapshot`);
-        console.log('🗑️ Snapshot deleted:', snapshotId);
-    }, [currentSnapshotId]);
-
-    const handleCompareSnapshots = useCallback((fromId: string, toId: string) => {
-        const from = snapshots.find(s => s.id === fromId);
-        const to = snapshots.find(s => s.id === toId);
-
-        if (!from || !to) {
-            console.error('Snapshots not found for comparison');
-            return;
-        }
-
-        const comparison = compareSnapshots(from, to);
-        setComparisonData({
-            comparison,
-            fromName: from.name,
-            toName: to.name
-        });
-        setShowComparison(true);
-        console.log('🔍 Comparing snapshots:', { from: from.name, to: to.name, comparison });
-    }, [snapshots]);
 
     // Sync inherited metrics when canvas config changes
     // This also ADDS new metrics if they're set in canvas config after product was placed
@@ -642,11 +535,11 @@ export function CanvasBoard() {
         if (sourceData.source === 'sidebar') {
             // Check if it's a solution
             if (sourceData.type === 'solution') {
-                const solution = solutions.find(s => s.id === sourceData.entityId);
+                const solution = solutionManager.solutions.find((s: Solution) => s.id === sourceData.entityId);
                 if (!solution) return;
 
                 // Create all products from the solution at their relative positions
-                const newItems: CanvasItem[] = solution.products.map((productSnapshot, index) => ({
+                const newItems: CanvasItem[] = solution.products.map((productSnapshot: any, index: number) => ({
                     id: `item-${Date.now()}-${index}`,
                     entityId: productSnapshot.productId,
                     entityType: 'product' as const,
@@ -774,101 +667,6 @@ export function CanvasBoard() {
         setDragState(null);
     };
 
-    // Context Menu Actions
-    const handleContextMenu = (e: React.MouseEvent) => {
-        e.preventDefault();
-        setContextMenu({ x: e.clientX, y: e.clientY, visible: true });
-    };
-
-    const contextMenuActions: ContextMenuAction[] = [
-        {
-            id: 'duplicate',
-            label: 'Duplicate',
-            icon: <Copy className="w-4 h-4" />,
-            action: () => {
-                const selected = multiSelect.selectedIds;
-                if (selected.length > 0) {
-                    const newItems = items
-                        .filter(item => selected.includes(item.id))
-                        .map(item => ({
-                            ...item,
-                            id: `item-${Date.now()}-${Math.random()}`,
-                            x: item.x + 20,
-                            y: item.y + 20
-                        }));
-                    setItems(prev => [...prev, ...newItems]);
-                    setDebugInfo(`Duplicated ${selected.length} item(s)`);
-                }
-            },
-            shortcut: 'Ctrl+D'
-        },
-        {
-            id: 'copy',
-            label: 'Copy',
-            icon: <Copy className="w-4 h-4" />,
-            action: clipboardOps.copy,
-            shortcut: 'Ctrl+C'
-        },
-        {
-            id: 'group',
-            label: multiSelect.selectedIds.length > 1 && items.filter(it => multiSelect.selectedIds.includes(it.id)).every(it => it.groupId) ? 'Ungroup' : 'Group',
-            icon: multiSelect.selectedIds.length > 1 && items.filter(it => multiSelect.selectedIds.includes(it.id)).every(it => it.groupId) ? <Ungroup className="w-4 h-4" /> : <Users className="w-4 h-4" />,
-            action: () => {
-                const selected = multiSelect.selectedIds;
-                if (selected.length < 2) return;
-
-                const selectedItems = items.filter(item => selected.includes(item.id));
-                const allGrouped = selectedItems.every(it => it.groupId);
-
-                if (allGrouped) {
-                    // Ungroup
-                    setItems(prev => prev.map(item =>
-                        selected.includes(item.id) ? { ...item, groupId: undefined } : item
-                    ));
-                    setDebugInfo(`Ungrouped ${selected.length} items`);
-                } else {
-                    // Group
-                    const groupId = `group-${Date.now()}`;
-                    setItems(prev => prev.map(item =>
-                        selected.includes(item.id) ? { ...item, groupId } : item
-                    ));
-                    setDebugInfo(`Grouped ${selected.length} items`);
-                }
-            },
-            disabled: multiSelect.selectedIds.length < 2
-        },
-        {
-            id: 'lock',
-            label: multiSelect.selectedIds.length > 0 && items.filter(it => multiSelect.selectedIds.includes(it.id)).every(it => it.locked) ? 'Unlock' : 'Lock',
-            icon: multiSelect.selectedIds.length > 0 && items.filter(it => multiSelect.selectedIds.includes(it.id)).every(it => it.locked) ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />,
-            action: () => {
-                const selected = multiSelect.selectedIds;
-                if (selected.length === 0) return;
-
-                const selectedItems = items.filter(item => selected.includes(item.id));
-                const allLocked = selectedItems.every(it => it.locked);
-
-                setItems(prev => prev.map(item =>
-                    selected.includes(item.id) ? { ...item, locked: !allLocked } : item
-                ));
-                setDebugInfo(`${allLocked ? 'Unlocked' : 'Locked'} ${selected.length} item(s)`);
-            }
-        },
-        {
-            id: 'delete',
-            label: 'Delete',
-            icon: <Trash2 className="w-4 h-4" />,
-            action: () => {
-                const selected = multiSelect.selectedIds;
-                if (selected.length > 0) {
-                    setItems(prev => prev.filter(item => !selected.includes(item.id)));
-                    multiSelect.clearSelection();
-                }
-            },
-            shortcut: 'Del',
-            danger: true
-        }
-    ];
 
     // Filters
     const filteredProducts = PRODUCTS.filter(p => {
@@ -881,17 +679,6 @@ export function CanvasBoard() {
         ? items.find(it => it.id === multiSelect.selectedIds[0])
         : undefined;
     const getVendorName = (vendorId: string) => VENDORS.find(v => v.id === vendorId)?.name;
-
-    // Snapshot Control Wrappers
-    const handleQuickSnapshot = () => {
-        handleCreateSnapshot(`Snapshot ${new Date().toLocaleTimeString()}`);
-    };
-
-    const handleCompareWithCurrent = (targetId: string) => {
-        if (currentSnapshotId) {
-            handleCompareSnapshots(currentSnapshotId, targetId);
-        }
-    };
 
     return (
         <DndContext
@@ -908,7 +695,7 @@ export function CanvasBoard() {
                     backgroundColor: 'var(--color-background)',
                     color: 'var(--color-text)'
                 }}
-                onContextMenu={handleContextMenu}
+                onContextMenu={contextMenuOps.handleContextMenu}
             >
                 <CanvasSidebar
                     searchQuery={searchQuery}
@@ -917,26 +704,23 @@ export function CanvasBoard() {
                     onPropositionChange={setSelectedProposition}
                     propositions={PROPOSITIONS}
                     filteredProducts={filteredProducts}
-                    solutions={solutions}
+                    solutions={solutionManager.solutions}
                     vendors={VENDORS}
                     getVendorName={getVendorName}
                     canvasConfig={canvasConfig}
                     onConfigChange={setCanvasConfig}
-                    snapshots={snapshots}
-                    currentSnapshotId={currentSnapshotId}
-                    onCreateSnapshot={handleCreateSnapshot}
-                    onLoadSnapshot={handleLoadSnapshot}
-                    onDeleteSnapshot={handleDeleteSnapshot}
-                    onCompareSnapshots={handleCompareSnapshots}
                 />
 
                 <SnapshotControls
-                    snapshots={snapshots}
-                    currentSnapshotId={currentSnapshotId || null}
-                    onCreate={handleQuickSnapshot}
-                    onLoad={handleLoadSnapshot}
-                    onDelete={handleDeleteSnapshot}
-                    onCompare={handleCompareWithCurrent}
+                    snapshots={snapshotManager.snapshots}
+                    currentSnapshotId={snapshotManager.currentSnapshotId || null}
+                    showCreateDialog={snapshotManager.showCreateDialog}
+                    onCreateSnapshot={snapshotManager.createSnapshot}
+                    onLoad={snapshotManager.loadSnapshot}
+                    onDelete={snapshotManager.deleteSnapshot}
+                    onCompare={snapshotManager.compareWithCurrent}
+                    onOpenCreateDialog={snapshotManager.openCreateDialog}
+                    onCloseCreateDialog={snapshotManager.closeCreateDialog}
                 />
 
                 <CanvasWorkspace
@@ -963,19 +747,19 @@ export function CanvasBoard() {
                     onPan={canvasTransform.setPan}
                     colorSchemeEnabled={colorSchemeEnabled}
                     onToggleColorScheme={() => setColorSchemeEnabled(!colorSchemeEnabled)}
-                    comparisonResult={showComparison && comparisonData ? comparisonData.comparison : null}
+                    comparisonResult={snapshotManager.showComparison && snapshotManager.comparisonData ? snapshotManager.comparisonData.comparison : null}
                     onClearItems={() => {
                         setItems([]);
                         multiSelect.clearSelection();
                     }}
                 />
 
-                {contextMenu.visible && (
+                {contextMenuOps.contextMenu.visible && (
                     <ContextMenu
-                        x={contextMenu.x}
-                        y={contextMenu.y}
-                        onClose={() => setContextMenu({ ...contextMenu, visible: false })}
-                        actions={contextMenuActions}
+                        x={contextMenuOps.contextMenu.x}
+                        y={contextMenuOps.contextMenu.y}
+                        onClose={contextMenuOps.closeContextMenu}
+                        actions={contextMenuOps.contextMenuActions}
                         selectedCount={multiSelect.selectedIds.length}
                     />
                 )}
@@ -986,7 +770,7 @@ export function CanvasBoard() {
                     onDistribute={alignment.distribute}
                     onGroup={alignment.group}
                     onLock={locking.toggleLock}
-                    onCreateSolution={handleCreateSolution}
+                    onCreateSolution={solutionManager.createSolution}
                     isGrouped={multiSelect.selectedIds.length > 0 && items.filter(it => multiSelect.selectedIds.includes(it.id)).every(it => it.groupId)}
                     isLocked={multiSelect.selectedIds.length > 0 && items.filter(it => multiSelect.selectedIds.includes(it.id)).every(it => it.locked)}
                     position={toolbarPosition}
@@ -1005,8 +789,8 @@ export function CanvasBoard() {
                     products={PRODUCTS}
                     colorSchemeEnabled={colorSchemeEnabled}
                     canvasConfig={canvasConfig}
-                    onMetricChange={handleMetricChange}
-                    onMetricReset={handleMetricReset}
+                    onMetricChange={metricManager.handleMetricChange}
+                    onMetricReset={metricManager.handleMetricReset}
                 />
             </div>
 
@@ -1082,19 +866,19 @@ export function CanvasBoard() {
 
             {/* Solution Dialog */}
             <SolutionDialog
-                isOpen={showSolutionDialog}
-                onClose={() => setShowSolutionDialog(false)}
-                onSave={handleSaveSolution}
-                selectedProducts={getSelectedProducts()}
+                isOpen={solutionManager.showSolutionDialog}
+                onClose={solutionManager.closeSolutionDialog}
+                onSave={solutionManager.saveSolution}
+                selectedProducts={solutionManager.getSelectedProducts()}
             />
 
             {/* Comparison View */}
-            {showComparison && comparisonData && (
+            {snapshotManager.showComparison && snapshotManager.comparisonData && (
                 <ComparisonView
-                    comparison={comparisonData.comparison}
-                    fromName={comparisonData.fromName}
-                    toName={comparisonData.toName}
-                    onClose={() => setShowComparison(false)}
+                    comparison={snapshotManager.comparisonData.comparison}
+                    fromName={snapshotManager.comparisonData.fromName}
+                    toName={snapshotManager.comparisonData.toName}
+                    onClose={snapshotManager.closeComparison}
                 />
             )}
         </DndContext>
