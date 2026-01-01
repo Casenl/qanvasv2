@@ -8,6 +8,7 @@ Welcome to the Qanvas documentation! This guide will help you navigate through a
 
 ### Architecture & Patterns
 - [Component Best Practices](architecture/COMPONENT_BEST_PRACTICES.md) - Guidelines for component development
+- [Theme & Styling Best Practices](architecture/THEME_STYLING_BEST_PRACTICES.md) - **REQUIRED**: CSS variables and theming
 - [Latest Audit (2025-12-31)](architecture/audits/2025-12-31.md) - Comprehensive codebase audit
 - [Previous Audit (2025-12-30)](architecture/audits/2025-12-30.md) - Architecture audit
 

@@ -28,6 +28,8 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useSnapGuides } from '@/hooks/useSnapGuides';
 import { useModifierKeys } from '@/hooks/useModifierKeys';
 import { useHistory } from '@/hooks/useHistory';
+import { useDragHandlers } from '@/hooks/useDragHandlers';
+import { FloatingToolbar } from '../toolbar/FloatingToolbar';
 import { ContextMenu } from '../controls/ContextMenu';
 import { AlignmentToolbar } from '../controls/AlignmentToolbar';
 import { ThemeToggle } from '../controls/ThemeToggle';
@@ -66,18 +68,10 @@ export function CanvasBoard() {
     const history = useHistory<CanvasItem[]>([]);
     const items = history.state;
     const setItems = history.setState;
-    const [activeDragData, setActiveDragData] = useState<any>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedProposition, setSelectedProposition] = useState<PropositionType | 'all'>('all');
     const [mounted, setMounted] = useState(false);
     const [debugInfo, setDebugInfo] = useState<string>('Ready');
-
-
-
-    // Drag state for visual guides
-    const [dragState, setDragState] = useState<{ id: string; x: number; y: number; width: number; height: number } | null>(null);
-    const lastDragUpdateRef = useRef<{ x: number; y: number; time: number } | null>(null);
-    const [lockedAxis, setLockedAxis] = useState<'x' | 'y' | null>(null);
 
     const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -99,27 +93,79 @@ export function CanvasBoard() {
     // Modifier keys
     const keys = useModifierKeys();
 
-    // Calculate snap guides based on current drag state (after multiSelect is defined)
+    // Calculate snap guides based on current drag state
+    // We need a temporary drag state for initial calculation
+    const [tempDragState, setTempDragState] = useState<{ id: string; x: number; y: number; width: number; height: number } | null>(null);
+
     // Only exclude items that are being dragged together (multi-select drag)
-    // If dragging a single item, it should snap to ALL other items (including selected ones)
-    const itemsBeingDragged = dragState?.id
-        ? (multiSelect.selectedIds.includes(dragState.id) && multiSelect.selectedIds.length > 1
-            ? multiSelect.selectedIds // Multi-select: exclude all selected items
-            : [dragState.id]) // Single item: only exclude the dragged item
+    const itemsBeingDragged = tempDragState?.id
+        ? (multiSelect.selectedIds.includes(tempDragState.id) && multiSelect.selectedIds.length > 1
+            ? multiSelect.selectedIds
+            : [tempDragState.id])
         : [];
 
     const { x: snappedX, y: snappedY, guides: snapGuides } = useSnapGuides(
-        dragState?.id ?? null,
-        dragState ? { x: dragState.x, y: dragState.y, width: dragState.width, height: dragState.height } : null,
+        tempDragState?.id ?? null,
+        tempDragState ? {
+            x: tempDragState.x,
+            y: tempDragState.y,
+            width: tempDragState.width,
+            height: tempDragState.height
+        } : null,
         items,
-        true, // enabled
-        itemsBeingDragged // exclude only items being dragged together
+        true,
+        itemsBeingDragged
     );
+
+    // Canvas transform hook (needed for drag handlers)
+    const canvasTransform = useCanvasTransform({
+        minZoom: 0.1,
+        maxZoom: 4.0,
+        zoomStep: 0.1,
+        initialZoom: 1.0
+    });
+
+    // Solution management hook (needed for drag handlers)
+    const solutionManager = useSolutionManager({
+        items,
+        setItems,
+        selectedIds: new Set(multiSelect.selectedIds),
+        setDebugInfo,
+        initialSolutions: SOLUTIONS
+    });
+
+    // Drag handlers hook - handles all drag & drop logic with snap values
+    const dragHandlers = useDragHandlers({
+        items,
+        setItems,
+        canvasRef,
+        canvasTransform,
+        multiSelect: {
+            selectedIds: new Set(multiSelect.selectedIds),
+            selectMultiple: multiSelect.selectMultiple
+        },
+        snappedX,
+        snappedY,
+        snapGuides,
+        keys,
+        canvasConfig,
+        solutionManager,
+        products: PRODUCTS,
+        setDebugInfo
+    });
+
+    // Sync temp drag state with actual drag state for snap calculations
+    useEffect(() => {
+        if (dragHandlers.dragState) {
+            setTempDragState(dragHandlers.dragState);
+        } else {
+            setTempDragState(null);
+        }
+    }, [dragHandlers.dragState]);
 
     // Item nudging hook
     const nudging = useItemNudging({
         items,
-        setItems,
         selectedIds: multiSelect.selectedIds
     });
 
@@ -168,15 +214,6 @@ export function CanvasBoard() {
         setDebugInfo
     });
 
-    // Solution management hook
-    const solutionManager = useSolutionManager({
-        items,
-        setItems,
-        selectedIds: new Set(multiSelect.selectedIds),
-        setDebugInfo,
-        initialSolutions: SOLUTIONS
-    });
-
     // Metric management hook
     const metricManager = useMetricManager({
         items,
@@ -209,14 +246,6 @@ export function CanvasBoard() {
             };
         }));
     }, [canvasConfig]);
-
-    // Canvas transform (zoom & pan) hook
-    const canvasTransform = useCanvasTransform({
-        minZoom: 0.1,
-        maxZoom: 4.0,
-        zoomStep: 0.1,
-        initialZoom: 1.0
-    });
 
 
     useEffect(() => {
@@ -284,7 +313,7 @@ export function CanvasBoard() {
 
     // Calculate floating toolbar position
     const toolbarPosition = useMemo(() => {
-        if (multiSelect.selectedIds.length === 0 || dragState) return undefined;
+        if (multiSelect.selectedIds.length === 0 || dragHandlers.dragState) return undefined;
 
         const selectedItems = items.filter(it => multiSelect.selectedIds.includes(it.id));
         if (selectedItems.length === 0) return undefined;
@@ -318,7 +347,7 @@ export function CanvasBoard() {
             top: Math.max(80, top), // Clamp to prevent going off top screen
             left
         };
-    }, [items, multiSelect.selectedIds, dragState, canvasTransform]);
+    }, [items, multiSelect.selectedIds, dragHandlers.dragState, canvasTransform]);
 
     // Prevent hydration mismatch
     if (!mounted) return (
@@ -326,346 +355,6 @@ export function CanvasBoard() {
             <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
         </div>
     );
-
-    // Handlers
-    const handleDragStart = (event: DragStartEvent) => {
-        setActiveDragData(event.active.data.current);
-        setDebugInfo(`Dragging ${event.active.data.current?.label}...`);
-
-        const sourceData = event.active.data.current;
-
-        if (sourceData?.source === 'canvas') {
-            // Existing canvas item
-            const item = items.find(it => it.id === event.active.id);
-            if (item) {
-                setDragState({
-                    id: item.id,
-                    x: item.x,
-                    y: item.y,
-                    width: 300,
-                    height: 172
-                });
-                // Store initial position for Shift-key axis locking
-                lastDragUpdateRef.current = { x: item.x, y: item.y, time: Date.now() };
-            }
-        } else if (sourceData?.source === 'sidebar') {
-            // New item from sidebar - initialize at cursor position
-            // We'll update the position in handleDragMove
-            setDragState({
-                id: 'new-item-temp',
-                x: 0,
-                y: 0,
-                width: 300,
-                height: 172
-            });
-            lastDragUpdateRef.current = { x: 0, y: 0, time: Date.now() };
-        }
-    };
-
-    const handleDragMove = (event: DragMoveEvent) => {
-        const { active, delta } = event;
-        const sourceData = active.data.current;
-        const canvasRect = canvasRef.current?.getBoundingClientRect();
-        if (!canvasRect) return;
-
-        // Check if Shift key is pressed for axis locking
-        const isShiftPressed = keys.shift;
-
-        if (sourceData?.source === 'canvas') {
-            // Moving existing canvas item
-            const item = items.find(it => it.id === active.id);
-            if (item) {
-                // Delta is already in canvas coordinates (adjusted by zoom in dnd-kit)
-                // But we need to account for zoom manually
-                const { zoom } = canvasTransform;
-                let newX = item.x + (delta.x / zoom);
-                let newY = item.y + (delta.y / zoom);
-                let currentLockedAxis: 'x' | 'y' | null = null;
-
-                // Apply Shift-key axis locking
-                if (isShiftPressed && lastDragUpdateRef.current) {
-                    const initialX = lastDragUpdateRef.current.x;
-                    const initialY = lastDragUpdateRef.current.y;
-                    const deltaFromInitialX = Math.abs(newX - initialX);
-                    const deltaFromInitialY = Math.abs(newY - initialY);
-
-                    // Lock to the axis with larger movement
-                    if (deltaFromInitialX > deltaFromInitialY) {
-                        // Lock to X axis (horizontal movement only)
-                        newY = initialY;
-                        currentLockedAxis = 'x';
-                    } else {
-                        // Lock to Y axis (vertical movement only)
-                        newX = initialX;
-                        currentLockedAxis = 'y';
-                    }
-                }
-
-                // Update locked axis state for visual indicator
-                setLockedAxis(isShiftPressed ? currentLockedAxis : null);
-
-                // Only update if position changed by at least 1px (prevent infinite loops)
-                if (!dragState ||
-                    dragState.id !== item.id ||
-                    Math.abs(dragState.x - newX) >= 1 ||
-                    Math.abs(dragState.y - newY) >= 1) {
-                    setDragState({
-                        id: item.id,
-                        x: newX,
-                        y: newY,
-                        width: 300,
-                        height: 172
-                    });
-                }
-            }
-        } else if (sourceData?.source === 'sidebar') {
-            // Dragging new item from sidebar
-            const droppedRect = active.rect.current.translated;
-            if (droppedRect) {
-                // Convert screen coordinates to canvas coordinates
-                const { zoom, pan } = canvasTransform;
-                const screenX = droppedRect.left - canvasRect.left;
-                const screenY = droppedRect.top - canvasRect.top;
-
-                // Convert to canvas coordinates by accounting for zoom and pan
-                let newX = (screenX - pan.x) / zoom;
-                let newY = (screenY - pan.y) / zoom;
-                let currentLockedAxis: 'x' | 'y' | null = null;
-
-                // Apply Shift-key axis locking
-                if (isShiftPressed && lastDragUpdateRef.current) {
-                    const initialX = lastDragUpdateRef.current.x;
-                    const initialY = lastDragUpdateRef.current.y;
-                    const deltaFromInitialX = Math.abs(newX - initialX);
-                    const deltaFromInitialY = Math.abs(newY - initialY);
-
-                    // Lock to the axis with larger movement
-                    if (deltaFromInitialX > deltaFromInitialY) {
-                        // Lock to X axis (horizontal movement only)
-                        newY = initialY;
-                        currentLockedAxis = 'x';
-                    } else {
-                        // Lock to Y axis (vertical movement only)
-                        newX = initialX;
-                        currentLockedAxis = 'y';
-                    }
-                }
-
-                // Update locked axis state for visual indicator
-                setLockedAxis(isShiftPressed ? currentLockedAxis : null);
-
-                // Only update if position changed by at least 1px (prevent infinite loops)
-                if (!dragState ||
-                    dragState.id !== 'new-item-temp' ||
-                    Math.abs(dragState.x - newX) >= 1 ||
-                    Math.abs(dragState.y - newY) >= 1) {
-                    setDragState({
-                        id: 'new-item-temp',
-                        x: newX,
-                        y: newY,
-                        width: 300,
-                        height: 172
-                    });
-                }
-            }
-        }
-    };
-
-    const handleDragEnd = (event: DragEndEvent) => {
-        const { active, over } = event;
-        setActiveDragData(null);
-        setLockedAxis(null); // Clear axis lock indicator
-
-        if (!over || over.id !== 'canvas-droppable') {
-            setDebugInfo('Dropped outside canvas');
-            setDragState(null); // Clear drag state on invalid drop
-            return;
-        }
-
-        const canvasRect = canvasRef.current?.getBoundingClientRect();
-        const sourceData = active.data.current;
-        if (!sourceData) {
-            setDragState(null); // Clear drag state
-            return;
-        }
-
-        const droppedRect = active.rect.current.translated;
-
-        // Convert screen coordinates to canvas coordinates
-        const { zoom, pan } = canvasTransform;
-        const screenX = droppedRect ? (droppedRect.left - (canvasRect?.left ?? 0)) : 100;
-        const screenY = droppedRect ? (droppedRect.top - (canvasRect?.top ?? 0)) : 100;
-
-        // Convert to canvas coordinates
-        let rawX = (screenX - pan.x) / zoom;
-        let rawY = (screenY - pan.y) / zoom;
-
-        // Apply Shift-key axis locking if it was active
-        if (keys.shift && lastDragUpdateRef.current) {
-            const initialX = lastDragUpdateRef.current.x;
-            const initialY = lastDragUpdateRef.current.y;
-            const deltaFromInitialX = Math.abs(rawX - initialX);
-            const deltaFromInitialY = Math.abs(rawY - initialY);
-
-            // Lock to the axis with larger movement
-            if (deltaFromInitialX > deltaFromInitialY) {
-                // Lock to X axis (horizontal movement only)
-                rawY = initialY;
-            } else {
-                // Lock to Y axis (vertical movement only)
-                rawX = initialX;
-            }
-        }
-
-        // Use snapped position from snap guides if available
-        let finalX = rawX;
-        let finalY = rawY;
-
-        // Check if we have valid snapped positions
-        const hasSnapX = typeof snappedX === 'number' && !isNaN(snappedX) && isFinite(snappedX);
-        const hasSnapY = typeof snappedY === 'number' && !isNaN(snappedY) && isFinite(snappedY);
-
-        if (snapGuides.length > 0 && hasSnapX && hasSnapY && !keys.shift) {
-            // Snap guides have priority (but not when Shift is pressed for axis locking)
-            finalX = snappedX;
-            finalY = snappedY;
-        }
-
-
-        if (sourceData.source === 'sidebar') {
-            // Check if it's a solution
-            if (sourceData.type === 'solution') {
-                const solution = solutionManager.solutions.find((s: Solution) => s.id === sourceData.entityId);
-                if (!solution) return;
-
-                // Create all products from the solution at their relative positions
-                const newItems: CanvasItem[] = solution.products.map((productSnapshot: any, index: number) => ({
-                    id: `item-${Date.now()}-${index}`,
-                    entityId: productSnapshot.productId,
-                    entityType: 'product' as const,
-                    x: finalX + productSnapshot.relativeX,
-                    y: finalY + productSnapshot.relativeY,
-                    data: {
-                        label: PRODUCTS.find(p => p.id === productSnapshot.productId)?.name || 'Product',
-                        type: 'product',
-                        entityId: productSnapshot.productId,
-                        source: 'sidebar'
-                    },
-                    // Auto-initialize product config
-                    productConfig: initializeProductConfig(productSnapshot.productId, canvasConfig)
-                }));
-
-                setItems(prev => [...prev, ...newItems]);
-                multiSelect.selectMultiple(newItems.map(item => item.id));
-                setDebugInfo(`Added solution "${solution.name}" with ${newItems.length} products`);
-            } else {
-                // Regular product/vendor/etc
-                const newItem: CanvasItem = {
-                    id: `item-${Date.now()}`,
-                    entityId: sourceData.entityId,
-                    entityType: sourceData.type,
-                    x: finalX,
-                    y: finalY,
-                    data: sourceData,
-                    // Auto-initialize product config for products
-                    productConfig: sourceData.type === 'product'
-                        ? initializeProductConfig(sourceData.entityId, canvasConfig)
-                        : undefined
-                };
-                setItems(prev => [...prev, newItem]);
-                multiSelect.selectMultiple([newItem.id]);
-                setDebugInfo(`Added ${newItem.data.label}`);
-            }
-        } else if (sourceData.source === 'canvas') {
-            const draggedItem = items.find(it => it.id === active.id);
-            if (!draggedItem) return;
-
-            // Don't allow moving locked items
-            if (draggedItem.locked) {
-                setDebugInfo('Item is locked');
-                return;
-            }
-
-            // Check modifier keys from the actual drag event, not global state
-            // This prevents false positives from stale key state
-            const activatorEvent = event.activatorEvent as MouseEvent | KeyboardEvent | PointerEvent;
-            // Only Ctrl key should trigger copy, not Alt
-            const isCopying = ('ctrlKey' in activatorEvent && activatorEvent.ctrlKey);
-
-
-            if (isCopying) {
-                const newItemId = `item-${Date.now()}-${Math.random()}`;
-
-                setItems(prev => {
-                    const original = prev.find(it => it.id === active.id);
-                    if (!original) return prev;
-
-                    const newItem = {
-                        ...original,
-                        id: newItemId,
-                        x: finalX,
-                        y: finalY,
-                        groupId: undefined // Remove from group when copying
-                    };
-                    return [...prev, newItem];
-                });
-
-                multiSelect.selectMultiple([newItemId]);
-                setDebugInfo(`Copied item`);
-            } else {
-                // Calculate movement delta
-                const deltaX = finalX - draggedItem.x;
-                const deltaY = finalY - draggedItem.y;
-
-                // Check if dragged item is part of multi-selection
-                const isMultiSelected = multiSelect.selectedIds.includes(active.id as string) && multiSelect.selectedIds.length > 1;
-
-                if (isMultiSelected) {
-                    // Move all selected items together
-                    setItems(prev => prev.map(it => {
-                        if (multiSelect.selectedIds.includes(it.id) && !it.locked) {
-                            return {
-                                ...it,
-                                x: it.x + deltaX,
-                                y: it.y + deltaY
-                            };
-                        }
-                        return it;
-                    }));
-                    setDebugInfo(`Moved ${multiSelect.selectedIds.length} selected items`);
-                } else if (draggedItem.groupId) {
-                    // Move all items in the same group
-                    setItems(prev => prev.map(it => {
-                        if (it.groupId === draggedItem.groupId && !it.locked) {
-                            return {
-                                ...it,
-                                x: it.x + deltaX,
-                                y: it.y + deltaY
-                            };
-                        }
-                        return it;
-                    }));
-                    setDebugInfo(`Moved group`);
-                } else {
-                    // Move single item - USE FINAL POSITION (includes snapping)
-                    setItems(prev => prev.map(it => {
-                        if (it.id === active.id) {
-                            return {
-                                ...it,
-                                x: finalX,  // ✅ FIXED - Use snapped position
-                                y: finalY   // ✅ FIXED - Use snapped position
-                            };
-                        }
-                        return it;
-                    }));
-                    setDebugInfo(`Moved item to X:${Math.round(finalX)} Y:${Math.round(finalY)}`);
-                }
-            }
-        }
-
-        // Clear drag state after all operations are complete
-        setDragState(null);
-    };
 
 
     // Filters
@@ -684,9 +373,9 @@ export function CanvasBoard() {
         <DndContext
             id="qanvas-dnd-root"
             sensors={sensors}
-            onDragStart={handleDragStart}
-            onDragMove={handleDragMove}
-            onDragEnd={handleDragEnd}
+            onDragStart={dragHandlers.handleDragStart}
+            onDragMove={dragHandlers.handleDragMove}
+            onDragEnd={dragHandlers.handleDragEnd}
             collisionDetection={customCollisionStrategy}
         >
             <div
@@ -711,6 +400,13 @@ export function CanvasBoard() {
                     onConfigChange={setCanvasConfig}
                 />
 
+                {/* Floating Canvas Toolbar */}
+                <FloatingToolbar
+                    onToolChange={(tool) => {
+                        setDebugInfo(`Tool: ${tool}`);
+                    }}
+                />
+
                 <SnapshotControls
                     snapshots={snapshotManager.snapshots}
                     currentSnapshotId={snapshotManager.currentSnapshotId || null}
@@ -733,9 +429,9 @@ export function CanvasBoard() {
                     products={PRODUCTS}
                     multiSelect={multiSelect}
                     snapGuides={snapGuides}
-                    activeDragRect={dragState}
-                    activeDragItemId={activeDragData?.id || null}
-                    lockedAxis={lockedAxis}
+                    activeDragRect={dragHandlers.activeDragRect}
+                    activeDragItemId={dragHandlers.activeDragData?.id || null}
+                    lockedAxis={dragHandlers.lockedAxis}
                     isShiftPressed={keys.shift}
                     canvasTransform={canvasTransform}
                     zoom={canvasTransform.zoom}
@@ -777,8 +473,8 @@ export function CanvasBoard() {
                 />
 
                 <AxisLockIndicator
-                    isActive={keys.shift && !!dragState}
-                    axis={lockedAxis}
+                    isActive={keys.shift && !!dragHandlers.dragState}
+                    axis={dragHandlers.lockedAxis}
                 />
 
                 <PropertiesPanel
@@ -796,15 +492,15 @@ export function CanvasBoard() {
 
             {mounted && createPortal(
                 <DragOverlay dropAnimation={null}>
-                    {activeDragData ? (
-                        activeDragData.source === 'canvas' && multiSelect.selectedIds.length > 1 && multiSelect.selectedIds.includes(activeDragData.id) ? (
+                    {dragHandlers.activeDragData ? (
+                        dragHandlers.activeDragData.source === 'canvas' && multiSelect.selectedIds.length > 1 && multiSelect.selectedIds.includes(dragHandlers.activeDragData.id) ? (
                             // Multi-select drag: show all selected items
                             <div style={{ position: 'relative' }}>
                                 {multiSelect.selectedIds.map((selectedId, index) => {
                                     const selectedItem = items.find(i => i.id === selectedId);
                                     if (!selectedItem) return null;
 
-                                    const draggedItem = items.find(i => i.id === activeDragData.id);
+                                    const draggedItem = items.find(i => i.id === dragHandlers.activeDragData.id);
                                     if (!draggedItem) return null;
 
                                     // Calculate offset from dragged item
@@ -828,7 +524,7 @@ export function CanvasBoard() {
                                                     zIndex: 100 + index,
                                                     cursor: 'grabbing',
                                                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                                                    opacity: selectedId === activeDragData.id ? 1 : 0.7
+                                                    opacity: selectedId === dragHandlers.activeDragData.id ? 1 : 0.7
                                                 }}
                                             />
                                         </div>
@@ -838,17 +534,17 @@ export function CanvasBoard() {
                         ) : (
                             // Single item drag
                             <CanvasCardVisual
-                                item={activeDragData.source === 'canvas'
-                                    ? (items.find(i => i.id === activeDragData.id) || activeDragData as CanvasItem)
-                                    : {
+                                item={dragHandlers.activeDragData.source === 'canvas'
+                                    ? (items.find(i => i.id === dragHandlers.activeDragData.id) || dragHandlers.activeDragData as CanvasItem)
+                                    : ({
                                         id: 'temp-drag',
                                         x: 0,
                                         y: 0,
-                                        entityId: activeDragData.entityId,
-                                        entityType: activeDragData.type,
-                                        data: activeDragData,
+                                        entityId: dragHandlers.activeDragData.entityId,
+                                        entityType: dragHandlers.activeDragData.type,
+                                        data: dragHandlers.activeDragData,
                                         locked: false
-                                    } as CanvasItem
+                                    } as CanvasItem)
                                 }
                                 isSelected={true}
                                 style={{
