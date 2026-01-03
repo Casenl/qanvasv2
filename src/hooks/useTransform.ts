@@ -16,6 +16,8 @@ interface TransformState {
     centerX: number;
     centerY: number;
     initialSelections: Record<string, { x: number; y: number }>;
+    duplicatedItems?: CanvasItem[]; // Items created during Ctrl+Shift+drag
+    isDuplicating?: boolean; // Flag to track if we're in duplication mode
 }
 
 interface UseTransformProps {
@@ -24,6 +26,7 @@ interface UseTransformProps {
     snapEnabled?: boolean;
     onSnap?: (guides: SnapGuide[]) => void;
     onUpdate: (id: string, updates: Partial<CanvasItem> & { data?: any }) => void;
+    onItemAdd?: (item: CanvasItem) => void; // For duplicating items
     onTransformStart?: () => void;
     onTransformEnd?: () => void;
     zoom: number;
@@ -31,7 +34,7 @@ interface UseTransformProps {
     canvasRef: React.RefObject<HTMLDivElement>;
 }
 
-export function useTransform({ items, selectedIds, snapEnabled = true, onSnap, onUpdate, onTransformStart, onTransformEnd, zoom, pan, canvasRef }: UseTransformProps) {
+export function useTransform({ items, selectedIds, snapEnabled = true, onSnap, onUpdate, onItemAdd, onTransformStart, onTransformEnd, zoom, pan, canvasRef }: UseTransformProps) {
     const [transformState, setTransformState] = useState<TransformState | null>(null);
     const [lockedAxis, setLockedAxis] = useState<'x' | 'y' | null>(null);
     const activeItemRef = useRef<CanvasItem | null>(null);
@@ -140,7 +143,50 @@ export function useTransform({ items, selectedIds, snapEnabled = true, onSnap, o
             let dx = deltaX;
             let dy = deltaY;
 
-            if (e.shiftKey) {
+            // Check if we should duplicate (Ctrl+Shift held and not already duplicating)
+            const shouldDuplicate = e.ctrlKey && e.shiftKey && !transformState.isDuplicating && onItemAdd;
+
+            // If we should duplicate and haven't yet, create duplicates
+            if (shouldDuplicate) {
+                const duplicatedItems: CanvasItem[] = [];
+                const itemsToDuplicate = Object.keys(initialSelections || {}).map(id =>
+                    items.find(item => item.id === id)
+                ).filter((item): item is CanvasItem => item !== undefined);
+
+                itemsToDuplicate.forEach(item => {
+                    const duplicateId = `${item.entityType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                    const duplicate: CanvasItem = {
+                        ...item,
+                        id: duplicateId,
+                        x: item.x,
+                        y: item.y,
+                        groupId: undefined // Don't copy group membership
+                    };
+                    duplicatedItems.push(duplicate);
+                    onItemAdd!(duplicate);
+                });
+
+                // Update transform state to track duplicates
+                setTransformState(prev => prev ? {
+                    ...prev,
+                    isDuplicating: true,
+                    duplicatedItems,
+                    // Update initialSelections to point to duplicates
+                    initialSelections: duplicatedItems.reduce((acc, item, index) => {
+                        const originalId = Object.keys(initialSelections || {})[index];
+                        const originalPos = initialSelections?.[originalId];
+                        if (originalPos) {
+                            acc[item.id] = originalPos;
+                        }
+                        return acc;
+                    }, {} as Record<string, { x: number; y: number }>)
+                } : prev);
+
+                return; // Skip this frame, let duplicates be created first
+            }
+
+            // Axis locking with Shift (only if not also holding Ctrl for duplication)
+            if (e.shiftKey && !e.ctrlKey) {
                 if (Math.abs(dx) >= Math.abs(dy)) {
                     dy = 0;
                     setLockedAxis('x');
@@ -175,9 +221,13 @@ export function useTransform({ items, selectedIds, snapEnabled = true, onSnap, o
             const moveDeltaX = finalActiveX - startItemX;
             const moveDeltaY = finalActiveY - startItemY;
 
-            // Apply to all selected items
-            if (initialSelections) {
-                Object.entries(initialSelections).forEach(([id, startPos]) => {
+            // Apply to all selected items (or duplicates if duplicating)
+            const selectionsToMove = transformState.isDuplicating && transformState.duplicatedItems
+                ? transformState.initialSelections // These now point to duplicates
+                : initialSelections;
+
+            if (selectionsToMove) {
+                Object.entries(selectionsToMove).forEach(([id, startPos]) => {
                     onUpdate(id, {
                         x: startPos.x + moveDeltaX,
                         y: startPos.y + moveDeltaY
@@ -206,33 +256,63 @@ export function useTransform({ items, selectedIds, snapEnabled = true, onSnap, o
                 rotation: newRotation
             });
         } else if (type === 'resize') {
-            // This simplistic resize logic doesn't account for rotation yet
-            // Implementing correct resize-with-rotation is complex math
-            // For MVP P0, let's assume non-rotated resize first or standard bounding box resize
-
             let newX = startItemX;
             let newY = startItemY;
             let newWidth = startWidth;
             let newHeight = startHeight;
 
+            // Calculate aspect ratio
+            const aspectRatio = startWidth / startHeight;
+            const preserveAspectRatio = e.shiftKey;
+
             // Handle logic
             if (handle?.includes('e')) {
                 newWidth = Math.max(10, startWidth + deltaX);
+                if (preserveAspectRatio) {
+                    newHeight = newWidth / aspectRatio;
+                }
             }
             if (handle?.includes('w')) {
                 const maxDelta = startWidth - 10;
                 const appliedDelta = Math.min(deltaX, maxDelta);
                 newWidth = startWidth - appliedDelta;
                 newX = startItemX + appliedDelta;
+                if (preserveAspectRatio) {
+                    newHeight = newWidth / aspectRatio;
+                }
             }
             if (handle?.includes('s')) {
                 newHeight = Math.max(10, startHeight + deltaY);
+                if (preserveAspectRatio) {
+                    newWidth = newHeight * aspectRatio;
+                }
             }
             if (handle?.includes('n')) {
                 const maxDelta = startHeight - 10;
                 const appliedDelta = Math.min(deltaY, maxDelta);
                 newHeight = startHeight - appliedDelta;
                 newY = startItemY + appliedDelta;
+                if (preserveAspectRatio) {
+                    newWidth = newHeight * aspectRatio;
+                }
+            }
+
+            // For corner handles with aspect ratio, use the dominant direction
+            if (preserveAspectRatio && handle && (handle.includes('n') || handle.includes('s')) && (handle.includes('e') || handle.includes('w'))) {
+                // Use whichever dimension changed more
+                if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                    newHeight = newWidth / aspectRatio;
+                    // Adjust Y position for north handles
+                    if (handle.includes('n')) {
+                        newY = startItemY + (startHeight - newHeight);
+                    }
+                } else {
+                    newWidth = newHeight * aspectRatio;
+                    // Adjust X position for west handles
+                    if (handle.includes('w')) {
+                        newX = startItemX + (startWidth - newWidth);
+                    }
+                }
             }
 
             const activeItem = activeItemRef.current;
@@ -250,7 +330,7 @@ export function useTransform({ items, selectedIds, snapEnabled = true, onSnap, o
                 data: updatedData
             });
         }
-    }, [transformState, zoom, onUpdate, items, snapEnabled, onSnap]);
+    }, [transformState, zoom, onUpdate, onItemAdd, items, snapEnabled, onSnap]);
 
     const handleMouseUp = useCallback(() => {
         setTransformState(null);

@@ -124,6 +124,7 @@ export function CanvasWorkspace({
     // Transform hook for resize/rotate
     const transform = useTransform({
         onUpdate: (id, updates) => onItemUpdate?.(id, updates),
+        onItemAdd,
         onTransformStart,
         onTransformEnd,
         zoom: canvasTransform?.zoom || 1,
