@@ -14,9 +14,10 @@ import { useCanvasDrop } from '@/hooks/useCanvasDrop';
 import { CanvasOverlays } from './CanvasOverlays';
 import { MultiSelectBoundingBox } from './controls/MultiSelectBoundingBox';
 import { SnapGuide } from './controls/SnapGuides';
+import { DrawingPreview } from './controls/DrawingPreview';
 
 interface CanvasWorkspaceProps {
-    canvasRef: React.RefObject<HTMLDivElement | null>;
+    canvasRef: React.RefObject<HTMLDivElement>;
     items: CanvasItem[];
     snapGuides?: SnapGuide[];
     activeDragRect?: { x: number; y: number; width: number; height: number } | null;
@@ -56,8 +57,13 @@ interface CanvasWorkspaceProps {
     // Drawing mode
     drawingMode?: {
         handleCanvasClick: (e: React.MouseEvent<HTMLDivElement>) => boolean;
+        handleDrawStart: (e: React.MouseEvent<HTMLDivElement>) => boolean;
+        handleDrawMove: (e: React.MouseEvent<HTMLDivElement>) => void;
+        handleDrawEnd: () => void;
         getCursorStyle: () => string;
         screenToCanvas: (screenX: number, screenY: number) => { x: number; y: number };
+        drawingState: any;
+        activeTool?: string;
     };
     onItemUpdate?: (itemId: string, newData: any) => void;
     onItemAdd?: (item: CanvasItem) => void;
@@ -165,13 +171,17 @@ export function CanvasWorkspace({
         }
 
         // Left mouse button - check if we're in drawing mode
-        // Drawing mode takes precedence over selection, but ONLY if not in select mode
         if (drawingMode && e.button === 0) {
-            // Call drawing mode handler - it will check internally if tool is 'select' and return early
+            // Try interactive drawing tools first (pen, line, arrow)
+            const drawStarted = drawingMode.handleDrawStart(e);
+            if (drawStarted) {
+                return; // Drawing started, don't continue to other handlers
+            }
+
+            // Fall back to click-to-place tools (shapes, text, sticky notes, image)
             const handled = drawingMode.handleCanvasClick(e);
-            // If drawing mode handled it (created an item), don't continue to selection logic
             if (handled !== false) {
-                return;
+                return; // Item created, don't continue to selection logic
             }
         }
 
@@ -192,6 +202,12 @@ export function CanvasWorkspace({
     };
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        // Handle drawing (pen, line, arrow)
+        if (drawingMode?.drawingState?.isDrawing) {
+            drawingMode.handleDrawMove(e);
+            return;
+        }
+
         // Handle panning
         if (isPanning && canvasTransform) {
             const deltaX = e.clientX - panStart.x;
@@ -224,6 +240,12 @@ export function CanvasWorkspace({
     };
 
     const handleMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+        // End drawing
+        if (drawingMode?.drawingState?.isDrawing) {
+            drawingMode.handleDrawEnd();
+            return;
+        }
+
         // End panning
         if (isPanning) {
             setIsPanning(false);
@@ -358,6 +380,14 @@ export function CanvasWorkspace({
                     zoom={canvasTransform?.zoom || 1}
                 />
 
+                {/* Drawing Preview (pen, line, arrow) */}
+                {drawingMode?.drawingState && (
+                    <DrawingPreview
+                        drawingState={drawingMode.drawingState}
+                        activeTool={drawingMode.activeTool || 'select'}
+                    />
+                )}
+
                 {/* Canvas Items */}
                 {items.map((item) => {
                     const isItemSelected = selectedIds.includes(item.id);
@@ -441,7 +471,7 @@ export function CanvasWorkspace({
                                 {isItemSelected && selectedIds.length === 1 && hasDimensions && !item.locked && (
                                     <TransformLayer
                                         item={item}
-                                        zoom={canvasTransform.zoom}
+                                        zoom={canvasTransform?.zoom || 1}
                                         onTransformStart={(e, type, handle) => transform.startTransform(e, item, type, handle)}
                                     />
                                 )}
@@ -486,7 +516,7 @@ export function CanvasWorkspace({
             {/* Refactored Overlays */}
             <CanvasOverlays
                 canvasRef={canvasRef}
-                canvasTransform={canvasTransform}
+                canvasTransform={canvasTransform ?? null}
                 snapGuides={transform.transformState ? shapeSnapGuides : snapGuides}
                 activeDragRect={activeDragRect}
                 selectionBox={multiSelect.selectionBox}

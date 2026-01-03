@@ -6,7 +6,10 @@ import { ShapeRenderer } from './shapes/ShapeRenderer';
 import { TextRenderer } from './text/TextRenderer';
 import { StickyNoteRenderer } from './sticky/StickyNoteRenderer';
 import { FrameRenderer } from './frames/FrameRenderer';
-import { ShapeData, TextData, StickyNoteData, FrameData } from '@/lib/types/shapeTypes';
+import { PathRenderer } from './path/PathRenderer';
+import { LineRenderer } from './line/LineRenderer';
+import { ImageRenderer } from './image/ImageRenderer';
+import { ShapeData, TextData, StickyNoteData, FrameData, PathData, LineData, ImageData } from '@/lib/types/shapeTypes';
 
 interface CanvasItemRendererProps {
     item: CanvasItem;
@@ -73,11 +76,34 @@ export function CanvasItemRenderer({ item, isSelected, onClick, onUpdate }: Canv
                 />
             );
 
-        // For now, return null for unimplemented types
+        case 'pen':
+            return (
+                <PathRenderer
+                    data={item.data as PathData}
+                    isSelected={isSelected}
+                    onClick={onClick}
+                />
+            );
+
         case 'line':
         case 'arrow':
-        case 'pen':
+            return (
+                <LineRenderer
+                    data={item.data as LineData}
+                    isSelected={isSelected}
+                    onClick={onClick}
+                />
+            );
+
         case 'image':
+            return (
+                <ImageRenderer
+                    data={item.data as ImageData}
+                    isSelected={isSelected}
+                    onClick={onClick}
+                />
+            );
+
         case 'comment':
             return (
                 <div

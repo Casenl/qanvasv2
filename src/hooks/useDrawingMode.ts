@@ -1,7 +1,11 @@
 import { useState, useCallback, useRef } from 'react';
 import { ToolType } from './useToolbar';
 import { CanvasItem } from '@/lib/types';
-import { ShapeData, TextData, StickyNoteData, DEFAULT_SHAPE_STYLE, DEFAULT_SHAPE_SIZE, DEFAULT_TEXT_STYLE, STICKY_NOTE_COLORS } from '@/lib/types/shapeTypes';
+import {
+    ShapeData, TextData, StickyNoteData, PathData, LineData, ImageData,
+    DEFAULT_SHAPE_STYLE, DEFAULT_SHAPE_SIZE, DEFAULT_TEXT_STYLE,
+    STICKY_NOTE_COLORS, DEFAULT_PATH_STYLE, DEFAULT_LINE_STYLE
+} from '@/lib/types/shapeTypes';
 
 interface DrawingModeConfig {
     items: CanvasItem[];
@@ -20,6 +24,13 @@ interface DrawingState {
     startY: number;
     currentX: number;
     currentY: number;
+    // For pen tool (freehand drawing)
+    points?: { x: number; y: number }[];
+    // For line/arrow tool
+    endX?: number;
+    endY?: number;
+    // Temporary item being drawn
+    tempItemId?: string;
 }
 
 /**
@@ -126,6 +137,87 @@ export function useDrawingMode(config: DrawingModeConfig) {
     }, [generateId]);
 
     /**
+     * Create a path item (pen tool)
+     */
+    const createPathItem = useCallback((x: number, y: number, points: { x: number; y: number }[]): CanvasItem => {
+        // Generate SVG path string from points
+        const pathString = points.length > 0
+            ? `M ${points.map(p => `${p.x},${p.y}`).join(' L ')}`
+            : '';
+
+        const pathData: PathData = {
+            points,
+            pathString,
+            strokeColor: DEFAULT_PATH_STYLE.strokeColor!,
+            strokeWidth: DEFAULT_PATH_STYLE.strokeWidth!,
+            strokeStyle: DEFAULT_PATH_STYLE.strokeStyle,
+            opacity: DEFAULT_PATH_STYLE.opacity!,
+            smoothing: DEFAULT_PATH_STYLE.smoothing
+        };
+
+        return {
+            id: generateId('pen'),
+            entityId: generateId('pen-entity'),
+            entityType: 'pen',
+            x,
+            y,
+            data: pathData,
+            locked: false
+        };
+    }, [generateId]);
+
+    /**
+     * Create a line/arrow item
+     */
+    const createLineItem = useCallback((startX: number, startY: number, endX: number, endY: number, isArrow: boolean): CanvasItem => {
+        const lineData: LineData = {
+            startX: 0, // Relative to item position
+            startY: 0,
+            endX: endX - startX,
+            endY: endY - startY,
+            strokeColor: DEFAULT_LINE_STYLE.strokeColor!,
+            strokeWidth: DEFAULT_LINE_STYLE.strokeWidth!,
+            strokeStyle: DEFAULT_LINE_STYLE.strokeStyle,
+            opacity: DEFAULT_LINE_STYLE.opacity!,
+            startArrow: false,
+            endArrow: isArrow,
+            arrowSize: DEFAULT_LINE_STYLE.arrowSize
+        };
+
+        return {
+            id: generateId(isArrow ? 'arrow' : 'line'),
+            entityId: generateId(isArrow ? 'arrow-entity' : 'line-entity'),
+            entityType: isArrow ? 'arrow' : 'line',
+            x: startX,
+            y: startY,
+            data: lineData,
+            locked: false
+        };
+    }, [generateId]);
+
+    /**
+     * Create an image item
+     */
+    const createImageItem = useCallback((x: number, y: number, url: string, width: number = 300, height: number = 200): CanvasItem => {
+        const imageData: ImageData = {
+            url,
+            width,
+            height,
+            alt: 'Uploaded image'
+        };
+
+        return {
+            id: generateId('image'),
+            entityId: generateId('image-entity'),
+            entityType: 'image',
+            x,
+            y,
+            data: imageData,
+            locked: false
+        };
+    }, [generateId]);
+
+    /**
      * Handle canvas click to place items
      * @returns true if the click was handled (item created), false otherwise
      */
@@ -163,6 +255,45 @@ export function useDrawingMode(config: DrawingModeConfig) {
                 setDebugInfo?.(`Created sticky note at (${Math.round(x)}, ${Math.round(y)})`);
                 break;
 
+            case 'image':
+                // Trigger file upload dialog
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const imageUrl = event.target?.result as string;
+                            const img = new Image();
+                            img.onload = () => {
+                                // Create image item with actual dimensions
+                                const maxWidth = 400;
+                                const maxHeight = 400;
+                                let width = img.width;
+                                let height = img.height;
+
+                                // Scale down if too large
+                                if (width > maxWidth || height > maxHeight) {
+                                    const ratio = Math.min(maxWidth / width, maxHeight / height);
+                                    width *= ratio;
+                                    height *= ratio;
+                                }
+
+                                const imageItem = createImageItem(x, y, imageUrl, width, height);
+                                setItems(prev => [...prev, imageItem]);
+                                setDebugInfo?.(`Created image at (${Math.round(x)}, ${Math.round(y)})`);
+                                onToolReset?.();
+                            };
+                            img.src = imageUrl;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+                input.click();
+                return true; // Handled, but async
+
             default:
                 // Other tools not yet implemented
                 setDebugInfo?.(`Tool ${activeTool} not yet implemented`);
@@ -177,7 +308,7 @@ export function useDrawingMode(config: DrawingModeConfig) {
         }
 
         return false;
-    }, [activeTool, screenToCanvas, createShapeItem, createTextItem, createStickyNoteItem, setItems, setDebugInfo, onToolReset]);
+    }, [activeTool, screenToCanvas, createShapeItem, createTextItem, createStickyNoteItem, createImageItem, setItems, setDebugInfo, onToolReset]);
 
     /**
      * Get cursor style based on active tool
@@ -209,10 +340,100 @@ export function useDrawingMode(config: DrawingModeConfig) {
         }
     }, [activeTool]);
 
+    /**
+     * Handle mouse down for drawing tools (pen, line, arrow)
+     */
+    const handleDrawStart = useCallback((e: React.MouseEvent<HTMLDivElement>): boolean => {
+        // Only handle for drawing tools
+        if (!['pen', 'line', 'arrow'].includes(activeTool)) return false;
+
+        // Don't start drawing on existing items
+        const target = e.target as HTMLElement;
+        if (target.closest('[data-canvas-item]')) return false;
+
+        const { x, y } = screenToCanvas(e.clientX, e.clientY);
+
+        setDrawingState({
+            isDrawing: true,
+            startX: x,
+            startY: y,
+            currentX: x,
+            currentY: y,
+            points: activeTool === 'pen' ? [{ x, y }] : undefined
+        });
+
+        setDebugInfo?.(`Started drawing ${activeTool}`);
+        return true;
+    }, [activeTool, screenToCanvas, setDebugInfo]);
+
+    /**
+     * Handle mouse move for drawing tools
+     */
+    const handleDrawMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+        if (!drawingState?.isDrawing) return;
+
+        const { x, y } = screenToCanvas(e.clientX, e.clientY);
+
+        if (activeTool === 'pen') {
+            // Add point to path
+            setDrawingState(prev => prev ? {
+                ...prev,
+                currentX: x,
+                currentY: y,
+                points: [...(prev.points || []), { x, y }]
+            } : null);
+        } else if (activeTool === 'line' || activeTool === 'arrow') {
+            // Update end point
+            setDrawingState(prev => prev ? {
+                ...prev,
+                currentX: x,
+                currentY: y,
+                endX: x,
+                endY: y
+            } : null);
+        }
+    }, [drawingState, activeTool, screenToCanvas]);
+
+    /**
+     * Handle mouse up for drawing tools - finalize the drawing
+     */
+    const handleDrawEnd = useCallback(() => {
+        if (!drawingState?.isDrawing) return;
+
+        let newItem: CanvasItem | null = null;
+
+        if (activeTool === 'pen' && drawingState.points && drawingState.points.length > 1) {
+            // Create path item
+            newItem = createPathItem(drawingState.startX, drawingState.startY, drawingState.points);
+            setDebugInfo?.(`Created pen path with ${drawingState.points.length} points`);
+        } else if ((activeTool === 'line' || activeTool === 'arrow') && drawingState.endX !== undefined && drawingState.endY !== undefined) {
+            // Create line/arrow item
+            newItem = createLineItem(
+                drawingState.startX,
+                drawingState.startY,
+                drawingState.endX,
+                drawingState.endY,
+                activeTool === 'arrow'
+            );
+            setDebugInfo?.(`Created ${activeTool}`);
+        }
+
+        if (newItem) {
+            setItems(prev => [...prev, newItem!]);
+            onToolReset?.();
+        }
+
+        setDrawingState(null);
+    }, [drawingState, activeTool, createPathItem, createLineItem, setItems, setDebugInfo, onToolReset]);
+
     return {
         drawingState,
         handleCanvasClick,
+        handleDrawStart,
+        handleDrawMove,
+        handleDrawEnd,
         getCursorStyle,
-        screenToCanvas
+        screenToCanvas,
+        activeTool
     };
 }

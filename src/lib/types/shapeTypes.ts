@@ -83,6 +83,33 @@ export interface CommentData {
     resolved?: boolean;
 }
 
+// Path data for freehand drawing (pen tool)
+export interface PathData {
+    points: { x: number; y: number }[]; // Array of points
+    pathString: string; // SVG path string
+    strokeColor: string;
+    strokeWidth: number;
+    strokeStyle?: 'solid' | 'dashed' | 'dotted';
+    opacity: number;
+    smoothing?: number; // 0-1, how smooth the curve is
+}
+
+// Line/Arrow data
+export interface LineData {
+    startX: number;
+    startY: number;
+    endX: number;
+    endY: number;
+    strokeColor: string;
+    strokeWidth: number;
+    strokeStyle?: 'solid' | 'dashed' | 'dotted';
+    opacity: number;
+    // Arrow configuration
+    startArrow?: boolean; // Arrow at start point
+    endArrow?: boolean; // Arrow at end point
+    arrowSize?: number; // Size of arrow head
+}
+
 // Default styles
 export const DEFAULT_SHAPE_STYLE: ShapeStyle = {
     fillColor: '#3b82f6', // blue-500
@@ -105,6 +132,26 @@ export const DEFAULT_TEXT_STYLE: Partial<TextData> = {
     align: 'left',
     lineHeight: 1.5,
     letterSpacing: 0
+};
+
+export const DEFAULT_PATH_STYLE: Partial<PathData> = {
+    strokeColor: '#1e40af',
+    strokeWidth: 2,
+    strokeStyle: 'solid',
+    opacity: 1,
+    smoothing: 0.5,
+    points: [],
+    pathString: ''
+};
+
+export const DEFAULT_LINE_STYLE: Partial<LineData> = {
+    strokeColor: '#1e40af',
+    strokeWidth: 2,
+    strokeStyle: 'solid',
+    opacity: 1,
+    startArrow: false,
+    endArrow: true,
+    arrowSize: 10
 };
 
 export const STICKY_NOTE_COLORS = [
