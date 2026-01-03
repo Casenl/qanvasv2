@@ -303,7 +303,7 @@ export function ShapeRenderer({ data, isSelected = false, onClick, onUpdate }: S
                             outline: 'none',
                             color: data.textColor || '#000000',
                             fontSize: `${data.fontSize || 14}px`,
-                            fontFamily: data.fontFamily || 'Inter, sans-serif',
+                            fontFamily: data.fontFamily || 'Titillium Web, sans-serif',
                             fontWeight: data.fontWeight || 'normal',
                             fontStyle: data.fontStyle || 'normal',
                             textAlign: data.textAlign || 'center',
@@ -320,7 +320,7 @@ export function ShapeRenderer({ data, isSelected = false, onClick, onUpdate }: S
                         style={{
                             color: data.textColor || '#000000',
                             fontSize: `${data.fontSize || 14}px`,
-                            fontFamily: data.fontFamily || 'Inter, sans-serif',
+                            fontFamily: data.fontFamily || 'Titillium Web, sans-serif',
                             fontWeight: data.fontWeight || 'normal',
                             fontStyle: data.fontStyle || 'normal',
                             textAlign: data.textAlign || 'center',

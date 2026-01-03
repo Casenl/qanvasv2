@@ -148,7 +148,7 @@ export function CanvasWorkspace({
         }
     }, [transform.transformState, transform.handleMouseMove, transform.handleMouseUp]);
 
-    const handleMouseDown = (e: React.MouseEvent) => {
+    const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
         // If transforming, don't do anything else
         if (transform.transformState) return;
 
@@ -191,7 +191,7 @@ export function CanvasWorkspace({
         }
     };
 
-    const handleMouseMove = (e: React.MouseEvent) => {
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
         // Handle panning
         if (isPanning && canvasTransform) {
             const deltaX = e.clientX - panStart.x;
@@ -223,7 +223,7 @@ export function CanvasWorkspace({
         }
     };
 
-    const handleMouseUp = (e: React.MouseEvent) => {
+    const handleMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
         // End panning
         if (isPanning) {
             setIsPanning(false);

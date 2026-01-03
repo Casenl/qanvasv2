@@ -78,7 +78,7 @@ export function AlignmentToolbar({
     let currentStrokeStyle = 'solid';
     let currentTextColor = '#000000';
     let currentFontSize = 14;
-    let currentFontFamily = 'Inter, sans-serif';
+    let currentFontFamily = 'Titillium Web, sans-serif';
     let currentFontWeight = 'normal';
     let currentFontStyle = 'normal';
     let currentTextAlign = 'center';

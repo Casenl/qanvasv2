@@ -9,6 +9,7 @@ interface FontFamilyPickerProps {
 }
 
 const FONT_FAMILIES = [
+    { name: 'Titillium Web', value: 'Titillium Web, sans-serif' },
     { name: 'Inter', value: 'Inter, sans-serif' },
     { name: 'Noto Sans', value: 'Noto Sans, sans-serif' },
     { name: 'Roboto', value: 'Roboto, sans-serif' },

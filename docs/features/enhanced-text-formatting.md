@@ -18,7 +18,8 @@ Enhanced text formatting capabilities for shapes and text items on the canvas. T
 - **Component**: `FontFamilyPicker.tsx`
 - **Location**: Toolbar dropdown
 - **Fonts Available**:
-  - Inter (default)
+  - Titillium Web (default)
+  - Inter
   - Noto Sans
   - Roboto
   - Arial
@@ -184,7 +185,7 @@ textDecoration: `${underline ? 'underline' : ''} ${strikethrough ? 'line-through
 This allows both decorations to be applied simultaneously.
 
 ### Default Values
-- **Font Family**: `'Inter, sans-serif'`
+- **Font Family**: `'Titillium Web, sans-serif'`
 - **Line Height**: `1.5`
 - **Letter Spacing**: `0px`
 - **Underline**: `false`
@@ -282,6 +283,8 @@ All features use standard CSS properties:
 - ✅ Updated ShapeRenderer with new styling
 - ✅ Updated TextRenderer with new styling
 - ✅ Added underline and strikethrough toggles
+- ✅ Added Titillium Web font via Google Fonts
+- ✅ Set Titillium Web as default font for application
 
 ---
 

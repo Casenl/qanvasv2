@@ -1,9 +1,12 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Titillium_Web } from 'next/font/google'
 import './globals.css'
 import { cn } from '@/lib/utils'
 
-const inter = Inter({ subsets: ['latin'] })
+const titilliumWeb = Titillium_Web({
+    subsets: ['latin'],
+    weight: ['200', '300', '400', '600', '700', '900']
+})
 
 export const metadata: Metadata = {
     title: 'Qanvas v2',
@@ -17,7 +20,7 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en" suppressHydrationWarning>
-            <body className={cn(inter.className, "antialiased min-h-screen")}>{children}</body>
+            <body className={cn(titilliumWeb.className, "antialiased min-h-screen")}>{children}</body>
         </html>
     )
 }

@@ -100,7 +100,7 @@ export const DEFAULT_SHAPE_SIZE = {
 
 export const DEFAULT_TEXT_STYLE: Partial<TextData> = {
     fontSize: 16,
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Titillium Web, sans-serif',
     color: '#000000',
     align: 'left',
     lineHeight: 1.5,
