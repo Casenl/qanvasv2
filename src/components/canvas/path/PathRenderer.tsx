@@ -18,14 +18,35 @@ interface PathRendererProps {
  * - Supports stroke styling
  * - Selection state
  */
-export function PathRenderer({ data, isSelected = false, onClick }: PathRendererProps) {
+export function PathRenderer({ data, isSelected = false, onClick, onUpdate }: PathRendererProps) {
     const {
         pathString,
         strokeColor,
         strokeWidth,
         strokeStyle = 'solid',
-        opacity
+        opacity,
+        label,
+        labelColor = '#000000',
+        labelSize = 14,
+        labelBackgroundColor = 'rgba(255, 255, 255, 0.9)',
+        labelFontFamily = 'Titillium Web, sans-serif',
+        labelBold = false,
+        labelItalic = false
     } = data;
+
+    const [isEditingLabel, setIsEditingLabel] = React.useState(false);
+    const [editedLabel, setEditedLabel] = React.useState(label || '');
+    const prevLabelRef = React.useRef(label);
+
+    // Auto-enter edit mode when label is first created
+    React.useEffect(() => {
+        if (!prevLabelRef.current && label) {
+            // Label was just created, enter edit mode
+            setIsEditingLabel(true);
+            setEditedLabel(label);
+        }
+        prevLabelRef.current = label;
+    }, [label]);
 
     // Convert stroke style to SVG dasharray
     const getStrokeDashArray = () => {
@@ -57,14 +78,57 @@ export function PathRenderer({ data, isSelected = false, onClick }: PathRenderer
         return { minX, minY, maxX, maxY };
     };
 
+    // Calculate midpoint of path for label placement
+    const getMidpoint = () => {
+        if (!data.points || data.points.length === 0) {
+            return { x: 50, y: 50 };
+        }
+
+        const midIndex = Math.floor(data.points.length / 2);
+        return data.points[midIndex];
+    };
+
     const bbox = getBoundingBox();
     const width = Math.max(100, bbox.maxX - bbox.minX + 20); // Add padding
     const height = Math.max(100, bbox.maxY - bbox.minY + 20);
+    const midpoint = getMidpoint();
+
+    const handleLabelDoubleClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsEditingLabel(true);
+    };
+
+    const handleLabelBlur = () => {
+        setIsEditingLabel(false);
+        if (onUpdate && editedLabel !== label) {
+            onUpdate({ label: editedLabel });
+        }
+    };
+
+    const handleLabelKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleLabelBlur();
+        } else if (e.key === 'Escape') {
+            setEditedLabel(label || '');
+            setIsEditingLabel(false);
+        }
+    };
 
     return (
         <div
             data-canvas-item="path"
             onClick={onClick}
+            onDoubleClick={(e) => {
+                // Don't create label if clicking on existing label
+                if (isEditingLabel || label) return;
+
+                e.stopPropagation();
+                // Create a new label
+                if (onUpdate) {
+                    onUpdate({ label: 'Label' });
+                }
+            }}
             style={{
                 width,
                 height,
@@ -104,6 +168,62 @@ export function PathRenderer({ data, isSelected = false, onClick }: PathRenderer
                     />
                 )}
             </svg>
+
+            {/* Label */}
+            {(label || isEditingLabel) && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        left: midpoint.x,
+                        top: midpoint.y,
+                        transform: 'translate(-50%, -50%)',
+                        pointerEvents: isEditingLabel ? 'auto' : 'none'
+                    }}
+                    onDoubleClick={handleLabelDoubleClick}
+                >
+                    {isEditingLabel ? (
+                        <input
+                            type="text"
+                            value={editedLabel}
+                            onChange={(e) => setEditedLabel(e.target.value)}
+                            onBlur={handleLabelBlur}
+                            onKeyDown={handleLabelKeyDown}
+                            autoFocus
+                            style={{
+                                fontSize: `${labelSize}px`,
+                                color: labelColor,
+                                backgroundColor: labelBackgroundColor,
+                                border: '1px solid #3b82f6',
+                                borderRadius: '4px',
+                                padding: '4px 8px',
+                                outline: 'none',
+                                fontFamily: labelFontFamily,
+                                fontWeight: labelBold ? 'bold' : 'normal',
+                                fontStyle: labelItalic ? 'italic' : 'normal',
+                                minWidth: '60px'
+                            }}
+                        />
+                    ) : (
+                        <div
+                            style={{
+                                fontSize: `${labelSize}px`,
+                                color: labelColor,
+                                backgroundColor: labelBackgroundColor,
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                fontFamily: labelFontFamily,
+                                fontWeight: labelBold ? 'bold' : 'normal',
+                                fontStyle: labelItalic ? 'italic' : 'normal',
+                                whiteSpace: 'nowrap',
+                                pointerEvents: 'auto',
+                                cursor: 'text'
+                            }}
+                        >
+                            {label}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

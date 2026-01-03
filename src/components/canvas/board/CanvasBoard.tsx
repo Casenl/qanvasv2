@@ -594,18 +594,32 @@ export function CanvasBoard() {
                                 if (property === 'fillColor') newItem.data.color = value;
                                 return newItem;
                             } else if (item.entityType === 'pen') {
-                                // Map properties for Pen (path) renderer - only stroke properties
+                                // Map properties for Pen (path) renderer - stroke and label properties
                                 const newItem = { ...item, data: { ...item.data } };
                                 if (property === 'strokeColor') newItem.data.strokeColor = value;
                                 else if (property === 'strokeWidth') newItem.data.strokeWidth = value;
                                 else if (property === 'strokeStyle') newItem.data.strokeStyle = value;
+                                else if (property === 'label') newItem.data.label = value;
+                                else if (property === 'labelColor') newItem.data.labelColor = value;
+                                else if (property === 'labelSize') newItem.data.labelSize = value;
+                                else if (property === 'labelBackgroundColor') newItem.data.labelBackgroundColor = value;
+                                else if (property === 'labelFontFamily') newItem.data.labelFontFamily = value;
+                                else if (property === 'labelBold') newItem.data.labelBold = value;
+                                else if (property === 'labelItalic') newItem.data.labelItalic = value;
                                 return newItem;
                             } else if (item.entityType === 'line' || item.entityType === 'arrow') {
-                                // Map properties for Line/Arrow renderer - only stroke properties
+                                // Map properties for Line/Arrow renderer - stroke and label properties
                                 const newItem = { ...item, data: { ...item.data } };
                                 if (property === 'strokeColor') newItem.data.strokeColor = value;
                                 else if (property === 'strokeWidth') newItem.data.strokeWidth = value;
                                 else if (property === 'strokeStyle') newItem.data.strokeStyle = value;
+                                else if (property === 'label') newItem.data.label = value;
+                                else if (property === 'labelColor') newItem.data.labelColor = value;
+                                else if (property === 'labelSize') newItem.data.labelSize = value;
+                                else if (property === 'labelBackgroundColor') newItem.data.labelBackgroundColor = value;
+                                else if (property === 'labelFontFamily') newItem.data.labelFontFamily = value;
+                                else if (property === 'labelBold') newItem.data.labelBold = value;
+                                else if (property === 'labelItalic') newItem.data.labelItalic = value;
                                 return newItem;
                             }
                             return item;

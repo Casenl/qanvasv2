@@ -92,6 +92,16 @@ export interface PathData {
     strokeStyle?: 'solid' | 'dashed' | 'dotted';
     opacity: number;
     smoothing?: number; // 0-1, how smooth the curve is
+    // Label
+    label?: string;
+    labelColor?: string;
+    labelSize?: number;
+    labelPosition?: number; // 0-1, position along the path (0.5 = middle)
+    labelOffset?: number; // Perpendicular offset from path in pixels
+    labelBackgroundColor?: string;
+    labelFontFamily?: string;
+    labelBold?: boolean;
+    labelItalic?: boolean;
 }
 
 // Line/Arrow data
@@ -108,6 +118,16 @@ export interface LineData {
     startArrow?: boolean; // Arrow at start point
     endArrow?: boolean; // Arrow at end point
     arrowSize?: number; // Size of arrow head
+    // Label
+    label?: string;
+    labelColor?: string;
+    labelSize?: number;
+    labelPosition?: number; // 0-1, position along the line (0.5 = middle)
+    labelOffset?: number; // Perpendicular offset from line in pixels
+    labelBackgroundColor?: string;
+    labelFontFamily?: string;
+    labelBold?: boolean;
+    labelItalic?: boolean;
 }
 
 // Default styles
