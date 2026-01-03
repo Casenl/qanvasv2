@@ -593,6 +593,20 @@ export function CanvasBoard() {
                                 const newItem = { ...item, data: { ...item.data } };
                                 if (property === 'fillColor') newItem.data.color = value;
                                 return newItem;
+                            } else if (item.entityType === 'pen') {
+                                // Map properties for Pen (path) renderer - only stroke properties
+                                const newItem = { ...item, data: { ...item.data } };
+                                if (property === 'strokeColor') newItem.data.strokeColor = value;
+                                else if (property === 'strokeWidth') newItem.data.strokeWidth = value;
+                                else if (property === 'strokeStyle') newItem.data.strokeStyle = value;
+                                return newItem;
+                            } else if (item.entityType === 'line' || item.entityType === 'arrow') {
+                                // Map properties for Line/Arrow renderer - only stroke properties
+                                const newItem = { ...item, data: { ...item.data } };
+                                if (property === 'strokeColor') newItem.data.strokeColor = value;
+                                else if (property === 'strokeWidth') newItem.data.strokeWidth = value;
+                                else if (property === 'strokeStyle') newItem.data.strokeStyle = value;
+                                return newItem;
                             }
                             return item;
                         }));

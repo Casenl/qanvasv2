@@ -7,6 +7,7 @@ interface PathRendererProps {
     data: PathData;
     isSelected?: boolean;
     onClick?: () => void;
+    onUpdate?: (updates: Partial<PathData>) => void;
 }
 
 /**

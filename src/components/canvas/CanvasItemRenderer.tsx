@@ -82,6 +82,7 @@ export function CanvasItemRenderer({ item, isSelected, onClick, onUpdate }: Canv
                     data={item.data as PathData}
                     isSelected={isSelected}
                     onClick={onClick}
+                    onUpdate={handleUpdate}
                 />
             );
 
@@ -92,6 +93,7 @@ export function CanvasItemRenderer({ item, isSelected, onClick, onUpdate }: Canv
                     data={item.data as LineData}
                     isSelected={isSelected}
                     onClick={onClick}
+                    onUpdate={handleUpdate}
                 />
             );
 

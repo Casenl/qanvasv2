@@ -67,10 +67,10 @@ export function AlignmentToolbar({
     const hasSelection = selectedCount > 0;
 
     // Check if selected items are stylable (shape, text, sticky-note)
-    const hasStylable = selectedItems.some(item => ['shape', 'text', 'sticky-note', 'frame'].includes(item.entityType));
+    const hasStylable = selectedItems.some(item => ['shape', 'text', 'sticky-note', 'frame', 'pen', 'line', 'arrow'].includes(item.entityType));
 
     // Get representative item for current values
-    const firstItem = selectedItems.find(item => ['shape', 'text', 'sticky-note', 'frame'].includes(item.entityType));
+    const firstItem = selectedItems.find(item => ['shape', 'text', 'sticky-note', 'frame', 'pen', 'line', 'arrow'].includes(item.entityType));
 
     let currentFillColor = '#3b82f6';
     let currentStrokeColor = '#1e40af';
@@ -120,6 +120,18 @@ export function AlignmentToolbar({
             currentFillColor = firstItem.data?.color || currentFillColor;
         } else if (firstItem.entityType === 'frame') {
             currentFillColor = firstItem.data?.color || currentFillColor;
+        } else if (firstItem.entityType === 'pen') {
+            // Pen (path) items only have stroke properties
+            currentStrokeColor = firstItem.data?.strokeColor || currentStrokeColor;
+            currentStrokeWidth = firstItem.data?.strokeWidth || currentStrokeWidth;
+            currentStrokeStyle = firstItem.data?.strokeStyle || currentStrokeStyle;
+            currentFillColor = 'transparent';
+        } else if (firstItem.entityType === 'line' || firstItem.entityType === 'arrow') {
+            // Line/arrow items only have stroke properties
+            currentStrokeColor = firstItem.data?.strokeColor || currentStrokeColor;
+            currentStrokeWidth = firstItem.data?.strokeWidth || currentStrokeWidth;
+            currentStrokeStyle = firstItem.data?.strokeStyle || currentStrokeStyle;
+            currentFillColor = 'transparent';
         }
     }
 

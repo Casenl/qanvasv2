@@ -7,6 +7,7 @@ interface LineRendererProps {
     data: LineData;
     isSelected?: boolean;
     onClick?: () => void;
+    onUpdate?: (updates: Partial<LineData>) => void;
 }
 
 /**
