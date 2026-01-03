@@ -38,6 +38,14 @@ export function SnapGuides({ guides, canvasRect, dragRect, canvasTransform }: Sn
     const panX = canvasTransform?.pan.x ?? 0;
     const panY = canvasTransform?.pan.y ?? 0;
 
+    // Transform dragRect to screen coordinates for correct label positioning
+    const screenDragRect = dragRect ? {
+        x: (dragRect.x * zoom) + panX,
+        y: (dragRect.y * zoom) + panY,
+        width: dragRect.width * zoom,
+        height: dragRect.height * zoom
+    } : null;
+
     // Verbose logging - uncomment for detailed debugging
     // console.log('📐 SnapGuides rendering:', {
     //     guidesCount: guides.length,
@@ -77,10 +85,10 @@ export function SnapGuides({ guides, canvasRect, dragRect, canvasTransform }: Sn
 
                     if (guide.type === 'vertical') {
                         // For vertical guides (X-axis), label follows Y position of dragged item
-                        if (dragRect) {
-                            labelStyle.top = `${dragRect.y - 25}px`; // Just above item
+                        if (screenDragRect) {
+                            labelStyle.top = `${screenDragRect.y - 25}px`; // Just above item
                             // Ensure it stays within canvas vertically
-                            if (dragRect.y < 30) labelStyle.top = `${dragRect.y + dragRect.height + 10}px`;
+                            if (screenDragRect.y < 30) labelStyle.top = `${screenDragRect.y + screenDragRect.height + 10}px`;
                             labelStyle.left = '8px'; // Slight offset from line
                         } else {
                             labelStyle.top = '16px';
@@ -88,11 +96,11 @@ export function SnapGuides({ guides, canvasRect, dragRect, canvasTransform }: Sn
                         }
                     } else {
                         // For horizontal guides (Y-axis), label follows X position of dragged item
-                        if (dragRect) {
-                            labelStyle.left = `${dragRect.x}px`; // At item start
+                        if (screenDragRect) {
+                            labelStyle.left = `${screenDragRect.x}px`; // At item start
                             // Ensure it stays within canvas horizontally
-                            if (dragRect.x < 10) labelStyle.left = '10px';
-                            if (canvasRect && dragRect.x > canvasRect.width - 100) labelStyle.left = `${canvasRect.width - 100}px`;
+                            if (screenDragRect.x < 10) labelStyle.left = '10px';
+                            if (canvasRect && screenDragRect.x > canvasRect.width - 100) labelStyle.left = `${canvasRect.width - 100}px`;
                             labelStyle.top = '-25px'; // Just above line
                         } else {
                             labelStyle.left = '16px';

@@ -76,18 +76,6 @@ export function PropertiesPanel({
         return propositions.find(p => p.id === product.propositionId);
     };
 
-    // Debug logging
-    if (selectedItem) {
-        console.log('PropertiesPanel - Selected Item:', {
-            id: selectedItem.id,
-            entityType: selectedItem.entityType,
-            entityId: selectedItem.entityId,
-            hasProductConfig: !!selectedItem.productConfig,
-            productConfig: selectedItem.productConfig,
-            metricsCount: selectedItem.productConfig ? Object.keys(selectedItem.productConfig.metrics).length : 0
-        });
-    }
-
     const productDetails = getProductDetails();
     const vendor = getVendor();
     const proposition = getProposition();

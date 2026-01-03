@@ -43,6 +43,31 @@ export function useMultiSelect() {
         });
     }, []);
 
+    const toggleSelection = useCallback((ids: string[], isCtrlPressed: boolean) => {
+        setSelectedIds(prev => {
+            const newSet = new Set(prev);
+
+            if (isCtrlPressed) {
+                // Check if all items in the group are currently selected
+                const allSelected = ids.every(id => newSet.has(id));
+
+                if (allSelected) {
+                    // Deselect all
+                    ids.forEach(id => newSet.delete(id));
+                } else {
+                    // Select all
+                    ids.forEach(id => newSet.add(id));
+                }
+            } else {
+                // Regular click: Select only these items
+                newSet.clear();
+                ids.forEach(id => newSet.add(id));
+            }
+
+            return newSet;
+        });
+    }, []);
+
     const selectMultiple = useCallback((ids: string[]) => {
         setSelectedIds(new Set(ids));
     }, []);
@@ -72,17 +97,13 @@ export function useMultiSelect() {
     }, [selectedIds]);
 
     const startBoxSelection = useCallback((startX: number, startY: number) => {
-        console.log('🎯 Start box selection:', { startX, startY });
         selectionStartRef.current = { x: startX, y: startY };
         setIsSelecting(true);
         setSelectionBox({ x: startX, y: startY, width: 0, height: 0 });
     }, []);
 
     const updateBoxSelection = useCallback((currentX: number, currentY: number) => {
-        if (!selectionStartRef.current) {
-            console.warn('⚠️ No selection start ref');
-            return;
-        }
+        if (!selectionStartRef.current) return;
 
         const startX = selectionStartRef.current.x;
         const startY = selectionStartRef.current.y;
@@ -96,17 +117,10 @@ export function useMultiSelect() {
             height: Math.abs(height)
         };
 
-        console.log('📦 Update box:', {
-            start: { x: startX, y: startY },
-            current: { x: currentX, y: currentY },
-            box: newBox
-        });
-
         setSelectionBox(newBox);
     }, []); // No dependencies! Uses ref instead
 
     const endBoxSelection = useCallback((itemsInBox: string[], isCtrlPressed: boolean) => {
-        console.log('✅ End box selection:', { itemsInBox, isCtrlPressed });
 
         if (isCtrlPressed) {
             // Add to existing selection
@@ -127,6 +141,7 @@ export function useMultiSelect() {
         isSelecting,
         selectionBox,
         toggleSelect,
+        toggleSelection,
         selectMultiple,
         addToSelection,
         removeFromSelection,

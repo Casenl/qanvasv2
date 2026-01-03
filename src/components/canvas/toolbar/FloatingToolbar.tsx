@@ -27,6 +27,7 @@ import { ToolGroup } from './ToolGroup';
 import { ToolSeparator } from './ToolSeparator';
 
 interface FloatingToolbarProps {
+    toolbar: ReturnType<typeof useToolbar>;
     onToolChange?: (tool: ToolType) => void;
 }
 
@@ -39,8 +40,7 @@ interface FloatingToolbarProps {
  * - Keyboard shortcuts
  * - Glassmorphism design
  */
-export function FloatingToolbar({ onToolChange }: FloatingToolbarProps) {
-    const toolbar = useToolbar();
+export function FloatingToolbar({ toolbar, onToolChange }: FloatingToolbarProps) {
     const toolbarRef = useRef<HTMLDivElement>(null);
 
     // Notify parent of tool changes
@@ -194,6 +194,7 @@ export function FloatingToolbar({ onToolChange }: FloatingToolbarProps) {
                         shortcut="R"
                         isActive={toolbar.activeTool === 'rectangle'}
                         onClick={() => toolbar.selectTool('rectangle')}
+                        draggable={true}
                     />
                     <ToolButton
                         tool="circle"
@@ -202,6 +203,7 @@ export function FloatingToolbar({ onToolChange }: FloatingToolbarProps) {
                         shortcut="O"
                         isActive={toolbar.activeTool === 'circle'}
                         onClick={() => toolbar.selectTool('circle')}
+                        draggable={true}
                     />
                     <ToolButton
                         tool="triangle"
@@ -209,6 +211,7 @@ export function FloatingToolbar({ onToolChange }: FloatingToolbarProps) {
                         label="Triangle"
                         isActive={toolbar.activeTool === 'triangle'}
                         onClick={() => toolbar.selectTool('triangle')}
+                        draggable={true}
                     />
                     <ToolButton
                         tool="diamond"
@@ -216,6 +219,7 @@ export function FloatingToolbar({ onToolChange }: FloatingToolbarProps) {
                         label="Diamond"
                         isActive={toolbar.activeTool === 'diamond'}
                         onClick={() => toolbar.selectTool('diamond')}
+                        draggable={true}
                     />
                     <ToolButton
                         tool="hexagon"
@@ -223,6 +227,7 @@ export function FloatingToolbar({ onToolChange }: FloatingToolbarProps) {
                         label="Hexagon"
                         isActive={toolbar.activeTool === 'hexagon'}
                         onClick={() => toolbar.selectTool('hexagon')}
+                        draggable={true}
                     />
                     <ToolButton
                         tool="star"
@@ -230,6 +235,7 @@ export function FloatingToolbar({ onToolChange }: FloatingToolbarProps) {
                         label="Star"
                         isActive={toolbar.activeTool === 'star'}
                         onClick={() => toolbar.selectTool('star')}
+                        draggable={true}
                     />
                     <ToolButton
                         tool="heart"
@@ -237,6 +243,7 @@ export function FloatingToolbar({ onToolChange }: FloatingToolbarProps) {
                         label="Heart"
                         isActive={toolbar.activeTool === 'heart'}
                         onClick={() => toolbar.selectTool('heart')}
+                        draggable={true}
                     />
                 </div>
             </ToolGroup>
@@ -251,6 +258,7 @@ export function FloatingToolbar({ onToolChange }: FloatingToolbarProps) {
                 shortcut="T"
                 isActive={toolbar.activeTool === 'text'}
                 onClick={() => toolbar.selectTool('text')}
+                draggable={true}
             />
 
             <ToolSeparator />

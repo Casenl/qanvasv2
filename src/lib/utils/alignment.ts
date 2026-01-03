@@ -22,8 +22,20 @@ const ITEM_HEIGHT = 172; // Actual rendered card height
 
 /**
  * Get bounding box for an item
+ * Handles both legacy items (product/vendor/solution cards) and new items (shapes, text, sticky notes)
  */
 export function getItemBounds(item: CanvasItem): BoundingBox {
+    // For new item types with explicit dimensions
+    if (item.data && typeof item.data.width === 'number' && typeof item.data.height === 'number') {
+        return {
+            x: item.x,
+            y: item.y,
+            width: item.data.width,
+            height: item.data.height
+        };
+    }
+
+    // For legacy items (product/vendor/solution cards) use default dimensions
     return {
         x: item.x,
         y: item.y,
@@ -111,22 +123,33 @@ export function distributeItems(options: DistributeOptions): CanvasItem[] {
     const first = sorted[0];
     const last = sorted[sorted.length - 1];
 
+    const firstBounds = getItemBounds(first);
+    const lastBounds = getItemBounds(last);
+
     if (direction === 'horizontal') {
-        const totalSpace = (last.x + ITEM_WIDTH) - first.x;
-        const spacing = (totalSpace - (sorted.length * ITEM_WIDTH)) / (sorted.length - 1);
+        const totalSpace = (last.x + lastBounds.width) - first.x;
+        const totalItemWidth = sorted.reduce((sum, item) => sum + getItemBounds(item).width, 0);
+        const spacing = (totalSpace - totalItemWidth) / (sorted.length - 1);
 
-        return sorted.map((item, index) => ({
-            ...item,
-            x: first.x + index * (ITEM_WIDTH + spacing)
-        }));
+        let currentX = first.x;
+        return sorted.map((item) => {
+            const itemBounds = getItemBounds(item);
+            const newItem = { ...item, x: currentX };
+            currentX += itemBounds.width + spacing;
+            return newItem;
+        });
     } else {
-        const totalSpace = (last.y + ITEM_HEIGHT) - first.y;
-        const spacing = (totalSpace - (sorted.length * ITEM_HEIGHT)) / (sorted.length - 1);
+        const totalSpace = (last.y + lastBounds.height) - first.y;
+        const totalItemHeight = sorted.reduce((sum, item) => sum + getItemBounds(item).height, 0);
+        const spacing = (totalSpace - totalItemHeight) / (sorted.length - 1);
 
-        return sorted.map((item, index) => ({
-            ...item,
-            y: first.y + index * (ITEM_HEIGHT + spacing)
-        }));
+        let currentY = first.y;
+        return sorted.map((item) => {
+            const itemBounds = getItemBounds(item);
+            const newItem = { ...item, y: currentY };
+            currentY += itemBounds.height + spacing;
+            return newItem;
+        });
     }
 }
 

@@ -43,7 +43,22 @@ export interface Solution {
     };
 }
 
-export type EntityType = 'vendor' | 'product' | 'solution' | 'layer';
+export type EntityType =
+    | 'vendor'
+    | 'product'
+    | 'solution'
+    | 'layer'
+    // Drawing tools
+    | 'shape'
+    | 'line'
+    | 'arrow'
+    | 'pen'
+    // Content tools
+    | 'text'
+    | 'sticky-note'
+    | 'image'
+    | 'frame'
+    | 'comment';
 
 // Architecture Layers (for organizing components)
 export type ArchitectureLayer = 'presentation' | 'application' | 'data' | 'infrastructure' | 'security' | 'network';
@@ -64,6 +79,7 @@ export interface CanvasItem {
     layer?: ArchitectureLayer; // Which architectural layer this belongs to
     groupId?: string; // ID of the group this item belongs to
     locked?: boolean; // Whether this item is locked (can't be moved/edited)
+    rotation?: number; // Rotation in degrees
     productConfig?: import('./types/productConfig').ProductInstanceConfig; // Product-specific metrics
     data: any; // Context-specific data
 }

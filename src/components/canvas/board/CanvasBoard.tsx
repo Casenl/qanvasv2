@@ -48,6 +48,8 @@ import { useCanvasTransform } from '@/hooks/useCanvasTransform';
 import { useSnapshotManager } from '@/hooks/useSnapshotManager';
 import { useSolutionManager } from '@/hooks/useSolutionManager';
 import { useMetricManager } from '@/hooks/useMetricManager';
+import { useToolbar } from '@/hooks/useToolbar';
+import { useDrawingMode } from '@/hooks/useDrawingMode';
 import { ZoomControls } from '../controls/ZoomControls';
 import { SolutionDialog } from '../dialogs/SolutionDialog';
 import { CanvasConfiguration, DEFAULT_CANVAS_CONFIG } from '@/lib/types/canvasConfig';
@@ -68,12 +70,18 @@ export function CanvasBoard() {
     const history = useHistory<CanvasItem[]>([]);
     const items = history.state;
     const setItems = history.setState;
+    const setItemsWithoutHistory = history.setStateWithoutHistory;
+    const commitItemsToHistory = history.commitToHistory;
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedProposition, setSelectedProposition] = useState<PropositionType | 'all'>('all');
     const [mounted, setMounted] = useState(false);
     const [debugInfo, setDebugInfo] = useState<string>('Ready');
 
     const canvasRef = useRef<HTMLDivElement>(null);
+
+    // Track if we're currently transforming
+    const isTransformingRef = useRef(false);
+
 
     // Theme hook
     const { theme, toggleTheme, isDark } = useTheme();
@@ -222,6 +230,21 @@ export function CanvasBoard() {
         setDebugInfo
     });
 
+    // Toolbar hook (for drawing tools)
+    const toolbar = useToolbar();
+
+    // Drawing mode hook (for creating shapes, text, sticky notes)
+    const drawingMode = useDrawingMode({
+        items,
+        setItems,
+        activeTool: toolbar.activeTool,
+        canvasRef,
+        zoom: canvasTransform.zoom,
+        pan: canvasTransform.pan,
+        setDebugInfo,
+        onToolReset: () => toolbar.resetToSelect()
+    });
+
 
     // Sync inherited metrics when canvas config changes
     // This also ADDS new metrics if they're set in canvas config after product was placed
@@ -321,8 +344,15 @@ export function CanvasBoard() {
         // Calculate bounding box in canvas coordinates
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         selectedItems.forEach(item => {
-            const width = 300; // Standard card width
-            const height = 172; // Standard card height
+            // Get actual item dimensions
+            let width = 300; // Default for product/vendor/solution cards
+            let height = 172;
+
+            if (item.data && typeof item.data.width === 'number') {
+                width = item.data.width;
+                height = item.data.height || width;
+            }
+
             minX = Math.min(minX, item.x);
             minY = Math.min(minY, item.y);
             maxX = Math.max(maxX, item.x + width);
@@ -402,6 +432,7 @@ export function CanvasBoard() {
 
                 {/* Floating Canvas Toolbar */}
                 <FloatingToolbar
+                    toolbar={toolbar}
                     onToolChange={(tool) => {
                         setDebugInfo(`Tool: ${tool}`);
                     }}
@@ -448,6 +479,39 @@ export function CanvasBoard() {
                         setItems([]);
                         multiSelect.clearSelection();
                     }}
+                    drawingMode={drawingMode}
+                    onItemUpdate={(itemId, updates) => {
+                        if (isTransformingRef.current) {
+                            // During transform: silent update (no history)
+                            setItemsWithoutHistory(
+                                prev => prev.map(item =>
+                                    item.id === itemId ? { ...item, ...updates } : item
+                                )
+                            );
+                        } else {
+                            // Normal update: add to history
+                            setItems(
+                                prev => prev.map(item =>
+                                    item.id === itemId ? { ...item, ...updates } : item
+                                )
+                            );
+                        }
+                    }}
+                    onTransformStart={() => {
+                        isTransformingRef.current = true;
+                    }}
+                    onTransformEnd={() => {
+                        isTransformingRef.current = false;
+                        // Commit the transform to history
+                        commitItemsToHistory();
+                    }}
+                    onItemAdd={(newItem) => {
+                        setItems(prev => [...prev, newItem]);
+                        setDebugInfo(`Added ${newItem.entityType} via drag & drop`);
+                    }}
+                    onToolReset={() => {
+                        toolbar.resetToSelect();
+                    }}
                 />
 
                 {contextMenuOps.contextMenu.visible && (
@@ -469,6 +533,63 @@ export function CanvasBoard() {
                     onCreateSolution={solutionManager.createSolution}
                     isGrouped={multiSelect.selectedIds.length > 0 && items.filter(it => multiSelect.selectedIds.includes(it.id)).every(it => it.groupId)}
                     isLocked={multiSelect.selectedIds.length > 0 && items.filter(it => multiSelect.selectedIds.includes(it.id)).every(it => it.locked)}
+                    selectedItems={items.filter(it => multiSelect.selectedIds.includes(it.id))}
+                    onStyleChange={(property, value) => {
+                        // Determine if this is a text property or a style property
+                        const textProperties = ['textColor', 'fontSize', 'fontWeight', 'fontStyle', 'textAlign'];
+                        const isTextProperty = textProperties.includes(property);
+
+                        // Update for all selected stylable items
+                        setItems(prev => prev.map(item => {
+                            if (!multiSelect.selectedIds.includes(item.id)) return item;
+
+                            if (item.entityType === 'shape') {
+                                if (isTextProperty) {
+                                    // Text properties go directly in data
+                                    return {
+                                        ...item,
+                                        data: {
+                                            ...item.data,
+                                            [property]: value
+                                        }
+                                    };
+                                } else {
+                                    // Style properties go in data.style
+                                    return {
+                                        ...item,
+                                        data: {
+                                            ...item.data,
+                                            style: {
+                                                ...item.data.style,
+                                                [property]: value
+                                            }
+                                        }
+                                    };
+                                }
+                            } else if (item.entityType === 'text') {
+                                // Map properties for Text renderer
+                                const newItem = { ...item, data: { ...item.data } };
+                                if (property === 'textColor') newItem.data.color = value;
+                                else if (property === 'fontSize') newItem.data.fontSize = value;
+                                else if (property === 'fontWeight') newItem.data.bold = value === 'bold';
+                                else if (property === 'fontStyle') newItem.data.italic = value === 'italic';
+                                else if (property === 'textAlign') newItem.data.align = value;
+                                return newItem;
+                            } else if (item.entityType === 'sticky-note') {
+                                // Map properties for Note renderer
+                                const newItem = { ...item, data: { ...item.data } };
+                                if (property === 'fillColor') newItem.data.color = value;
+                                return newItem;
+                            } else if (item.entityType === 'frame') {
+                                // Map properties for Frame renderer
+                                const newItem = { ...item, data: { ...item.data } };
+                                if (property === 'fillColor') newItem.data.color = value;
+                                return newItem;
+                            }
+                            return item;
+                        }));
+                        setDebugInfo(`Updated ${property} for ${multiSelect.selectedIds.length} shapes`);
+                    }}
                     position={toolbarPosition}
                 />
 

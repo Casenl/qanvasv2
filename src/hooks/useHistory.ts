@@ -9,6 +9,8 @@ export interface HistoryState<T> {
 export interface UseHistoryReturn<T> {
     state: T;
     setState: (newState: T | ((prev: T) => T)) => void;
+    setStateWithoutHistory: (newState: T | ((prev: T) => T)) => void;
+    commitToHistory: () => void;
     undo: () => void;
     redo: () => void;
     canUndo: boolean;
@@ -25,6 +27,10 @@ export function useHistory<T>(initialState: T): UseHistoryReturn<T> {
         future: []
     });
 
+    // For tracking the state at the start of a "silent" update sequence
+    const [beforeSilentUpdate, setBeforeSilentUpdate] = useState<T | null>(null);
+
+    // Normal state update - adds to history
     const setState = useCallback((newState: T | ((prev: T) => T)) => {
         setHistory(prev => {
             const resolvedState = typeof newState === 'function'
@@ -37,8 +43,6 @@ export function useHistory<T>(initialState: T): UseHistoryReturn<T> {
             }
 
             const newPast = [...prev.past, prev.present];
-
-            // Limit history size
             if (newPast.length > MAX_HISTORY_SIZE) {
                 newPast.shift();
             }
@@ -46,10 +50,59 @@ export function useHistory<T>(initialState: T): UseHistoryReturn<T> {
             return {
                 past: newPast,
                 present: resolvedState,
-                future: [] // Clear future when new action is taken
+                future: []
             };
         });
+        // Clear beforeSilentUpdate since this is a normal commit
+        setBeforeSilentUpdate(null);
     }, []);
+
+    // Silent state update - does NOT add to history, but remembers the "before" state
+    const setStateWithoutHistory = useCallback((newState: T | ((prev: T) => T)) => {
+        setHistory(prev => {
+            const resolvedState = typeof newState === 'function'
+                ? (newState as (prev: T) => T)(prev.present)
+                : newState;
+
+            // On the FIRST silent update, capture the current state
+            if (beforeSilentUpdate === null) {
+                setBeforeSilentUpdate(prev.present);
+            }
+
+            return {
+                ...prev,
+                present: resolvedState
+            };
+        });
+    }, [beforeSilentUpdate]);
+
+    // Commit the current state to history (used after a sequence of silent updates)
+    const commitToHistory = useCallback(() => {
+        if (beforeSilentUpdate === null) {
+            // Nothing to commit - no silent updates were made
+            return;
+        }
+
+        setHistory(prev => {
+            // Don't commit if state is the same as before silent updates
+            if (JSON.stringify(prev.present) === JSON.stringify(beforeSilentUpdate)) {
+                return prev;
+            }
+
+            const newPast = [...prev.past, beforeSilentUpdate];
+            if (newPast.length > MAX_HISTORY_SIZE) {
+                newPast.shift();
+            }
+
+            return {
+                past: newPast,
+                present: prev.present,
+                future: []
+            };
+        });
+
+        setBeforeSilentUpdate(null);
+    }, [beforeSilentUpdate]);
 
     const undo = useCallback(() => {
         setHistory(prev => {
@@ -64,6 +117,7 @@ export function useHistory<T>(initialState: T): UseHistoryReturn<T> {
                 future: [prev.present, ...prev.future]
             };
         });
+        setBeforeSilentUpdate(null);
     }, []);
 
     const redo = useCallback(() => {
@@ -79,6 +133,7 @@ export function useHistory<T>(initialState: T): UseHistoryReturn<T> {
                 future: newFuture
             };
         });
+        setBeforeSilentUpdate(null);
     }, []);
 
     const clear = useCallback(() => {
@@ -87,11 +142,14 @@ export function useHistory<T>(initialState: T): UseHistoryReturn<T> {
             present: prev.present,
             future: []
         }));
+        setBeforeSilentUpdate(null);
     }, []);
 
     return {
         state: history.present,
         setState,
+        setStateWithoutHistory,
+        commitToHistory,
         undo,
         redo,
         canUndo: history.past.length > 0,

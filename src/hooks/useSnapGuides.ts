@@ -37,237 +37,207 @@ type SnapCandidate = {
  * Hook to detect snap guides when dragging an item
  * Checks for: Left-Left, Right-Right, Center-Center, Left-Right, Right-Left (and similarly for Y axis)
  */
+/**
+ * Calculate snap guides for a dragged item
+ * Standalone function that can be used outside of hooks (e.g. in event handlers)
+ */
+export function calculateSnapGuides(
+    draggedItemId: string | null,
+    dragPosition: { x: number; y: number; width?: number; height?: number } | null,
+    allItems: CanvasItem[],
+    selectedItemIds: string[] = []
+): SnapResult {
+    if (!draggedItemId || !dragPosition) {
+        return { x: dragPosition?.x ?? 0, y: dragPosition?.y ?? 0, guides: [] };
+    }
+
+    const width = dragPosition.width ?? ITEM_WIDTH;
+    const height = dragPosition.height ?? ITEM_HEIGHT;
+
+    // Current dragged edges
+    const current = {
+        left: dragPosition.x,
+        right: dragPosition.x + width,
+        centerX: dragPosition.x + width / 2,
+        top: dragPosition.y,
+        bottom: dragPosition.y + height,
+        centerY: dragPosition.y + height / 2
+    };
+
+    // Filter out the dragged item AND all selected items (for multi-select drag)
+    const otherItems = allItems.filter(item =>
+        item.id !== draggedItemId &&
+        !selectedItemIds.includes(item.id)
+    );
+
+    let snappedX = dragPosition.x;
+    let snappedY = dragPosition.y;
+
+    // Find best X snap
+    let bestSnapX: SnapCandidate | null = null;
+    let minDistX = SNAP_THRESHOLD;
+
+    for (const item of otherItems) {
+        const bounds = getItemBounds(item);
+        const target = {
+            left: bounds.x,
+            right: bounds.x + bounds.width,
+            centerX: bounds.x + bounds.width / 2
+        };
+
+        // Check all X combinations
+        const checks = [
+            { d: target.left - current.left, pos: target.left, label: 'Left Edge', type: 'edge' },
+            { d: target.right - current.left, pos: target.right, label: 'Right to Left', type: 'edge' },
+            { d: target.left - current.right, pos: target.left, label: 'Left to Right', type: 'edge' },
+            { d: target.right - current.right, pos: target.right, label: 'Right Edge', type: 'edge' },
+            { d: target.centerX - current.centerX, pos: target.centerX, label: 'Center', type: 'center' }
+        ];
+
+        for (const check of checks) {
+            if (Math.abs(check.d) < minDistX) {
+                minDistX = Math.abs(check.d);
+                bestSnapX = {
+                    distance: check.d,
+                    position: check.pos,
+                    guideType: check.type as any,
+                    label: check.label,
+                    itemId: item.id
+                };
+            }
+        }
+    }
+
+    // Apply X Snap
+    const finalGuides: SnapGuide[] = [];
+    if (bestSnapX) {
+        if (bestSnapX.label.includes('Left Edge') || bestSnapX.label.includes('Right to Left')) {
+            snappedX = bestSnapX.position;
+        } else if (bestSnapX.label.includes('Right Edge') || bestSnapX.label.includes('Left to Right')) {
+            snappedX = bestSnapX.position - width;
+        } else if (bestSnapX.label.includes('Center')) {
+            snappedX = bestSnapX.position - width / 2;
+        }
+
+        const targetItem = otherItems.find(it => it.id === bestSnapX!.itemId);
+        const targetBounds = targetItem ? getItemBounds(targetItem) : null;
+
+        const minY = targetBounds ? Math.min(current.top, targetBounds.y) : current.top;
+        const maxY = targetBounds ? Math.max(current.bottom, targetBounds.y + targetBounds.height) : current.bottom;
+
+        finalGuides.push({
+            type: 'vertical',
+            position: bestSnapX.position,
+            items: [bestSnapX.itemId],
+            label: bestSnapX.label,
+            guideType: bestSnapX.guideType,
+            minY,
+            maxY
+        });
+    }
+
+    // Find best Y snap
+    let bestSnapY: SnapCandidate | null = null;
+    let minDistY = SNAP_THRESHOLD;
+
+    for (const item of otherItems) {
+        const bounds = getItemBounds(item);
+        const target = {
+            top: bounds.y,
+            bottom: bounds.y + bounds.height,
+            centerY: bounds.y + bounds.height / 2
+        };
+
+        const checks = [
+            { d: target.top - current.top, pos: target.top, label: 'Top Edge', type: 'edge' },
+            { d: target.bottom - current.top, pos: target.bottom, label: 'Bottom to Top', type: 'edge' },
+            { d: target.top - current.bottom, pos: target.top, label: 'Top to Bottom', type: 'edge' },
+            { d: target.bottom - current.bottom, pos: target.bottom, label: 'Bottom Edge', type: 'edge' },
+            { d: target.centerY - current.centerY, pos: target.centerY, label: 'Middle', type: 'center' }
+        ];
+
+        for (const check of checks) {
+            if (Math.abs(check.d) < minDistY) {
+                minDistY = Math.abs(check.d);
+                bestSnapY = {
+                    distance: check.d,
+                    position: check.pos,
+                    guideType: check.type as any,
+                    label: check.label,
+                    itemId: item.id
+                };
+            }
+        }
+    }
+
+    // Apply Y Snap
+    if (bestSnapY) {
+        if (bestSnapY.label.includes('Top Edge') || bestSnapY.label.includes('Bottom to Top')) {
+            snappedY = bestSnapY.position;
+        } else if (bestSnapY.label.includes('Bottom Edge') || bestSnapY.label.includes('Top to Bottom')) {
+            snappedY = bestSnapY.position - height;
+        } else if (bestSnapY.label.includes('Middle')) {
+            snappedY = bestSnapY.position - height / 2;
+        }
+
+        const targetItem = otherItems.find(it => it.id === bestSnapY!.itemId);
+        const targetBounds = targetItem ? getItemBounds(targetItem) : null;
+
+        const minX = targetBounds ? Math.min(current.left, targetBounds.x) : current.left;
+        const maxX = targetBounds ? Math.max(current.right, targetBounds.x + targetBounds.width) : current.right;
+
+        finalGuides.push({
+            type: 'horizontal',
+            position: bestSnapY.position,
+            items: [bestSnapY.itemId],
+            label: bestSnapY.label,
+            guideType: bestSnapY.guideType,
+            minX,
+            maxX
+        });
+    }
+
+    // Consolidate guides
+    const consolidatedGuides: SnapGuide[] = [];
+    for (const guide of finalGuides) {
+        const existing = consolidatedGuides.find(
+            g => g.type === guide.type && Math.abs(g.position - guide.position) < 1
+        );
+        if (existing) {
+            existing.items = [...new Set([...existing.items, ...guide.items])];
+            if (guide.type === 'vertical') {
+                existing.minY = Math.min(existing.minY ?? Infinity, guide.minY ?? Infinity);
+                existing.maxY = Math.max(existing.maxY ?? -Infinity, guide.maxY ?? -Infinity);
+            } else {
+                existing.minX = Math.min(existing.minX ?? Infinity, guide.minX ?? Infinity);
+                existing.maxX = Math.max(existing.maxX ?? -Infinity, guide.maxX ?? -Infinity);
+            }
+        } else {
+            consolidatedGuides.push(guide);
+        }
+    }
+
+    return {
+        x: Math.round(snappedX),
+        y: Math.round(snappedY),
+        guides: consolidatedGuides
+    };
+}
+
+/**
+ * Hook to detect snap guides when dragging an item
+ */
 export function useSnapGuides(
     draggedItemId: string | null,
     dragPosition: { x: number; y: number; width?: number; height?: number } | null,
     allItems: CanvasItem[],
     enabled: boolean = true,
-    selectedItemIds: string[] = [] // Items to exclude from snap calculations (for multi-select)
+    selectedItemIds: string[] = []
 ): SnapResult {
     return useMemo(() => {
-        if (!enabled || !draggedItemId || !dragPosition) {
+        if (!enabled) {
             return { x: dragPosition?.x ?? 0, y: dragPosition?.y ?? 0, guides: [] };
         }
-
-        const width = dragPosition.width ?? ITEM_WIDTH;
-        const height = dragPosition.height ?? ITEM_HEIGHT;
-
-        // Current dragged edges
-        const current = {
-            left: dragPosition.x,
-            right: dragPosition.x + width,
-            centerX: dragPosition.x + width / 2,
-            top: dragPosition.y,
-            bottom: dragPosition.y + height,
-            centerY: dragPosition.y + height / 2
-        };
-
-        // Verbose logging - uncomment for detailed debugging
-        // console.log('🔍 Snap Debug - Current dragged item:', {
-        //     id: draggedItemId,
-        //     position: dragPosition,
-        //     current
-        // });
-
-        // Filter out the dragged item AND all selected items (for multi-select drag)
-        const otherItems = allItems.filter(item =>
-            item.id !== draggedItemId &&
-            !selectedItemIds.includes(item.id)
-        );
-        // console.log('🔍 Snap Debug - Other items count:', otherItems.length);
-
-        let snappedX = dragPosition.x;
-        let snappedY = dragPosition.y;
-
-        // Find best X snap
-        let bestSnapX: SnapCandidate | null = null;
-        let minDistX = SNAP_THRESHOLD;
-
-        for (const item of otherItems) {
-            const bounds = getItemBounds(item);
-            const target = {
-                left: bounds.x,
-                right: bounds.x + bounds.width,
-                centerX: bounds.x + bounds.width / 2
-            };
-
-            // Check all X combinations
-            const checks = [
-                { d: target.left - current.left, pos: target.left, label: 'Left Edge', type: 'edge' },
-                { d: target.right - current.left, pos: target.right, label: 'Right to Left', type: 'edge' },
-                { d: target.left - current.right, pos: target.left, label: 'Left to Right', type: 'edge' },
-                { d: target.right - current.right, pos: target.right, label: 'Right Edge', type: 'edge' },
-                { d: target.centerX - current.centerX, pos: target.centerX, label: 'Center', type: 'center' }
-            ];
-
-            // Verbose logging - uncomment for detailed debugging
-            // console.log(`  Item ${item.id}:`, {
-            //     target,
-            //     checks: checks.map(c => ({ label: c.label, distance: c.d.toFixed(1), withinThreshold: Math.abs(c.d) < SNAP_THRESHOLD }))
-            // });
-
-            for (const check of checks) {
-                if (Math.abs(check.d) < minDistX) {
-                    minDistX = Math.abs(check.d);
-                    bestSnapX = {
-                        distance: check.d,
-                        position: check.pos,
-                        guideType: check.type as any,
-                        label: check.label,
-                        itemId: item.id
-                    };
-                }
-            }
-        }
-
-        // Apply X Snap
-        const finalGuides: SnapGuide[] = [];
-        if (bestSnapX) {
-            // Calculate the new X position based on which edge/center is snapping
-            // The guide position tells us where the alignment should be
-            // We need to adjust the item's X based on which part of it is aligning
-
-            // Determine which edge/center of the dragged item is snapping
-            if (bestSnapX.label.includes('Left Edge') || bestSnapX.label.includes('Right to Left')) {
-                // Left edge of dragged item aligns to guide position
-                snappedX = bestSnapX.position;
-            } else if (bestSnapX.label.includes('Right Edge') || bestSnapX.label.includes('Left to Right')) {
-                // Right edge of dragged item aligns to guide position
-                snappedX = bestSnapX.position - width;
-            } else if (bestSnapX.label.includes('Center')) {
-                // Center of dragged item aligns to guide position
-                snappedX = bestSnapX.position - width / 2;
-            }
-
-            // Calculate bounds for the guide to span across aligned items
-            const targetItem = otherItems.find(it => it.id === bestSnapX.itemId);
-            const targetBounds = targetItem ? getItemBounds(targetItem) : null;
-
-            // For vertical guides, calculate minY and maxY to span both items
-            const minY = targetBounds ? Math.min(current.top, targetBounds.y) : current.top;
-            const maxY = targetBounds ? Math.max(current.bottom, targetBounds.y + targetBounds.height) : current.bottom;
-
-            finalGuides.push({
-                type: 'vertical',
-                position: bestSnapX.position,
-                items: [bestSnapX.itemId],
-                label: bestSnapX.label,
-                guideType: bestSnapX.guideType,
-                minY,
-                maxY
-            });
-            // Only log once, not during every drag move
-            // console.log('✅ X Snap found:', { ...bestSnapX, calculatedX: snappedX });
-        }
-
-        // Find best Y snap
-        let bestSnapY: SnapCandidate | null = null;
-        let minDistY = SNAP_THRESHOLD;
-
-        for (const item of otherItems) {
-            const bounds = getItemBounds(item);
-            const target = {
-                top: bounds.y,
-                bottom: bounds.y + bounds.height,
-                centerY: bounds.y + bounds.height / 2
-            };
-
-            // Check all Y combinations
-            const checks = [
-                { d: target.top - current.top, pos: target.top, label: 'Top Edge', type: 'edge' },
-                { d: target.bottom - current.top, pos: target.bottom, label: 'Bottom to Top', type: 'edge' },
-                { d: target.top - current.bottom, pos: target.top, label: 'Top to Bottom', type: 'edge' },
-                { d: target.bottom - current.bottom, pos: target.bottom, label: 'Bottom Edge', type: 'edge' },
-                { d: target.centerY - current.centerY, pos: target.centerY, label: 'Middle', type: 'center' }
-            ];
-
-            for (const check of checks) {
-                if (Math.abs(check.d) < minDistY) {
-                    minDistY = Math.abs(check.d);
-                    bestSnapY = {
-                        distance: check.d,
-                        position: check.pos,
-                        guideType: check.type as any,
-                        label: check.label,
-                        itemId: item.id
-                    };
-                }
-            }
-        }
-
-        // Apply Y Snap
-        if (bestSnapY) {
-            // Calculate the new Y position based on which edge/center is snapping
-            // The guide position tells us where the alignment should be
-            // We need to adjust the item's Y based on which part of it is aligning
-
-            // Determine which edge/center of the dragged item is snapping
-            if (bestSnapY.label.includes('Top Edge') || bestSnapY.label.includes('Bottom to Top')) {
-                // Top edge of dragged item aligns to guide position
-                snappedY = bestSnapY.position;
-            } else if (bestSnapY.label.includes('Bottom Edge') || bestSnapY.label.includes('Top to Bottom')) {
-                // Bottom edge of dragged item aligns to guide position
-                snappedY = bestSnapY.position - height;
-            } else if (bestSnapY.label.includes('Middle')) {
-                // Middle of dragged item aligns to guide position
-                snappedY = bestSnapY.position - height / 2;
-            }
-
-            // Calculate bounds for the guide to span across aligned items
-            const targetItem = otherItems.find(it => it.id === bestSnapY.itemId);
-            const targetBounds = targetItem ? getItemBounds(targetItem) : null;
-
-            // For horizontal guides, calculate minX and maxX to span both items
-            const minX = targetBounds ? Math.min(current.left, targetBounds.x) : current.left;
-            const maxX = targetBounds ? Math.max(current.right, targetBounds.x + targetBounds.width) : current.right;
-
-            finalGuides.push({
-                type: 'horizontal',
-                position: bestSnapY.position,
-                items: [bestSnapY.itemId],
-                label: bestSnapY.label,
-                guideType: bestSnapY.guideType,
-                minX,
-                maxX
-            });
-            // console.log('✅ Y Snap found:', { ...bestSnapY, calculatedY: snappedY });
-        }
-
-        // Consolidate guides at the same position to avoid duplicates
-        // When multiple items align to the same position, show only one guide
-        const consolidatedGuides: SnapGuide[] = [];
-        for (const guide of finalGuides) {
-            const existing = consolidatedGuides.find(
-                g => g.type === guide.type && Math.abs(g.position - guide.position) < 1
-            );
-            if (existing) {
-                // Merge items array and extend bounds
-                existing.items = [...new Set([...existing.items, ...guide.items])];
-                // Extend bounds to cover all aligned items
-                if (guide.type === 'vertical') {
-                    existing.minY = Math.min(existing.minY ?? Infinity, guide.minY ?? Infinity);
-                    existing.maxY = Math.max(existing.maxY ?? -Infinity, guide.maxY ?? -Infinity);
-                } else {
-                    existing.minX = Math.min(existing.minX ?? Infinity, guide.minX ?? Infinity);
-                    existing.maxX = Math.max(existing.maxX ?? -Infinity, guide.maxX ?? -Infinity);
-                }
-            } else {
-                consolidatedGuides.push(guide);
-            }
-        }
-
-        // console.log('📊 Final snap result:', {
-        //     originalX: dragPosition.x,
-        //     originalY: dragPosition.y,
-        //     snappedX,
-        //     snappedY,
-        //     guides: consolidatedGuides.length
-        // });
-        // Round to whole pixels for clean alignment
-        return {
-            x: Math.round(snappedX),
-            y: Math.round(snappedY),
-            guides: consolidatedGuides
-        };
+        return calculateSnapGuides(draggedItemId, dragPosition, allItems, selectedItemIds);
     }, [draggedItemId, dragPosition, allItems, enabled, selectedItemIds]);
 }

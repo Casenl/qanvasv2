@@ -167,11 +167,11 @@ export const CanvasCardVisual = React.forwardRef<HTMLDivElement, CanvasCardVisua
 
 CanvasCardVisual.displayName = 'CanvasCardVisual';
 
-export function CanvasItemCard({ item, isSelected, onClick, vendorName, propositionColor, forceTransparent = false, comparisonChanges }: CanvasItemCardProps & { comparisonChanges?: any }) {
+export function CanvasItemCard({ item, isSelected, onClick, vendorName, propositionColor, forceTransparent = false, comparisonChanges, disableDnD = false }: CanvasItemCardProps & { comparisonChanges?: any, disableDnD?: boolean }) {
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
         id: item.id,
         data: { ...item, source: 'canvas' },
-        disabled: item.locked // Disable dragging if locked
+        disabled: item.locked || disableDnD
     });
 
     const mouseDownPos = React.useRef<{ x: number; y: number } | null>(null);
@@ -199,6 +199,22 @@ export function CanvasItemCard({ item, isSelected, onClick, vendorName, proposit
         left: item.x,
         // Visual opacity is handled by isDragging prop in visual component
     };
+
+    // If managed externally (e.g. via specific wrapper), render visual only
+    if (disableDnD) {
+        return (
+            <CanvasCardVisual
+                ref={setNodeRef}
+                item={item}
+                isSelected={isSelected}
+                vendorName={vendorName}
+                isDragging={isDragging || forceTransparent}
+                style={style}
+                propositionColor={propositionColor}
+                comparisonChanges={comparisonChanges}
+            />
+        );
+    }
 
     // Merge our onMouseDown with dnd-kit's listeners
     // For locked items: Allow clicks but prevent dragging

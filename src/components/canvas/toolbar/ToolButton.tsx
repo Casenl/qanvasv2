@@ -11,6 +11,7 @@ interface ToolButtonProps {
     isActive: boolean;
     showLabel?: boolean;
     onClick: () => void;
+    draggable?: boolean; // Enable drag & drop for this button
 }
 
 /**
@@ -30,11 +31,29 @@ export function ToolButton({
     shortcut,
     isActive,
     showLabel = false,
-    onClick
+    onClick,
+    draggable = false
 }: ToolButtonProps) {
+    const handleDragStart = (e: React.DragEvent) => {
+        // Set drag data to include tool type
+        e.dataTransfer.setData('application/qanvas-tool', tool);
+        e.dataTransfer.effectAllowed = 'copy';
+
+        // Create a custom drag image (optional - could be the icon itself)
+        const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
+        dragImage.style.opacity = '0.7';
+        document.body.appendChild(dragImage);
+        e.dataTransfer.setDragImage(dragImage, 20, 20);
+
+        // Clean up drag image after drag starts
+        setTimeout(() => document.body.removeChild(dragImage), 0);
+    };
+
     return (
         <button
             onClick={onClick}
+            draggable={draggable}
+            onDragStart={draggable ? handleDragStart : undefined}
             style={{
                 backgroundColor: isActive
                     ? 'hsl(var(--color-brand-primary) / 0.1)'

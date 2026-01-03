@@ -12,8 +12,14 @@ import {
     Unlock,
     Users,
     Ungroup,
-    Package
+    Package,
+    Minus,
+    Bold,
+    Italic,
+    Type
 } from 'lucide-react';
+import { ColorPicker } from './ColorPicker';
+import { LineStylePicker } from './LineStylePicker';
 
 export interface AlignmentAction {
     id: string;
@@ -33,6 +39,9 @@ export interface AlignmentToolbarProps {
     onCreateSolution?: () => void;
     isGrouped: boolean;
     isLocked: boolean;
+    // Shape styling props
+    selectedItems?: any[]; // Array of selected items to check if they're shapes
+    onStyleChange?: (property: string, value: any) => void; // Callback for style changes
 }
 
 export function AlignmentToolbar({
@@ -44,11 +53,55 @@ export function AlignmentToolbar({
     onCreateSolution,
     isGrouped,
     isLocked,
+    selectedItems = [],
+    onStyleChange,
     position
 }: AlignmentToolbarProps & { position?: { top: number; left: number } }) {
     const needsMultiple = selectedCount < 2;
     const needsThree = selectedCount < 3;
     const hasSelection = selectedCount > 0;
+
+    // Check if selected items are stylable (shape, text, sticky-note)
+    const hasStylable = selectedItems.some(item => ['shape', 'text', 'sticky-note', 'frame'].includes(item.entityType));
+
+    // Get representative item for current values
+    const firstItem = selectedItems.find(item => ['shape', 'text', 'sticky-note', 'frame'].includes(item.entityType));
+
+    let currentFillColor = '#3b82f6';
+    let currentStrokeColor = '#1e40af';
+    let currentStrokeWidth = 2;
+    let currentStrokeStyle = 'solid';
+    let currentTextColor = '#000000';
+    let currentFontSize = 14;
+    let currentFontWeight = 'normal';
+    let currentFontStyle = 'normal';
+    let currentTextAlign = 'center';
+
+    if (firstItem) {
+        if (firstItem.entityType === 'shape') {
+            currentFillColor = firstItem.data?.style?.fillColor || currentFillColor;
+            currentStrokeColor = firstItem.data?.style?.strokeColor || currentStrokeColor;
+            currentStrokeWidth = firstItem.data?.style?.strokeWidth || 2;
+            currentStrokeStyle = firstItem.data?.style?.strokeStyle || 'solid';
+
+            currentTextColor = firstItem.data?.textColor || currentTextColor;
+            currentFontSize = firstItem.data?.fontSize || currentFontSize;
+            currentFontWeight = firstItem.data?.fontWeight || currentFontWeight;
+            currentFontStyle = firstItem.data?.fontStyle || currentFontStyle;
+            currentTextAlign = firstItem.data?.textAlign || currentTextAlign;
+        } else if (firstItem.entityType === 'text') {
+            currentTextColor = firstItem.data?.color || currentTextColor;
+            currentFontSize = firstItem.data?.fontSize || currentFontSize;
+            currentFontWeight = firstItem.data?.bold ? 'bold' : 'normal';
+            currentFontStyle = firstItem.data?.italic ? 'italic' : 'normal';
+            currentTextAlign = firstItem.data?.align || currentTextAlign;
+            currentFillColor = 'transparent';
+        } else if (firstItem.entityType === 'sticky-note') {
+            currentFillColor = firstItem.data?.color || currentFillColor;
+        } else if (firstItem.entityType === 'frame') {
+            currentFillColor = firstItem.data?.color || currentFillColor;
+        }
+    }
 
     const alignmentActions: AlignmentAction[] = [
         {
@@ -174,6 +227,163 @@ export function AlignmentToolbar({
                 transform: position ? 'translate(-50%, -100%)' : undefined // Center horizontally, place above
             }}
         >
+            {/* Shape Styling Controls - Only show when shapes are selected */}
+            {hasStylable && onStyleChange && (
+                <>
+                    <ColorPicker
+                        value={currentFillColor}
+                        onChange={(color) => onStyleChange('fillColor', color)}
+                        label="Fill Color"
+                    />
+                    <ColorPicker
+                        value={currentStrokeColor}
+                        onChange={(color) => onStyleChange('strokeColor', color)}
+                        label="Stroke Color"
+                    />
+
+                    {/* Stroke Width */}
+                    <div className="flex items-center gap-1 px-2">
+                        <Minus className="w-3 h-3" style={{ color: 'var(--color-text-muted)' }} />
+                        <input
+                            type="range"
+                            min="0"
+                            max="10"
+                            step="1"
+                            value={currentStrokeWidth}
+                            onChange={(e) => onStyleChange('strokeWidth', parseInt(e.target.value))}
+                            className="w-16 h-1 rounded-lg appearance-none cursor-pointer"
+                            style={{
+                                background: 'var(--color-border)',
+                                accentColor: 'var(--color-primary)'
+                            }}
+                            title={`Stroke Width: ${currentStrokeWidth}px`}
+                        />
+                        <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                            {currentStrokeWidth}
+                        </span>
+                    </div>
+
+                    {/* Line Style */}
+                    <LineStylePicker
+                        value={currentStrokeStyle}
+                        onChange={(style) => onStyleChange('strokeStyle', style)}
+                    />
+
+                    {/* Separator */}
+                    <div
+                        className="w-px h-6 mx-1"
+                        style={{ backgroundColor: 'var(--color-border)' }}
+                    />
+
+                    {/* Text Color */}
+                    <ColorPicker
+                        value={currentTextColor}
+                        onChange={(color) => onStyleChange('textColor', color)}
+                        label="Text Color"
+                    />
+
+                    {/* Font Size */}
+                    <div className="flex items-center gap-1 px-2">
+                        <Type className="w-3 h-3" style={{ color: 'var(--color-text-muted)' }} />
+                        <input
+                            type="number"
+                            min="8"
+                            max="72"
+                            value={currentFontSize}
+                            onChange={(e) => onStyleChange('fontSize', parseInt(e.target.value))}
+                            className="w-12 px-1 text-xs text-center rounded border"
+                            style={{
+                                backgroundColor: 'var(--color-background)',
+                                borderColor: 'var(--color-border)',
+                                color: 'var(--color-text)'
+                            }}
+                        />
+                    </div>
+
+                    {/* Bold */}
+                    <button
+                        onClick={() => onStyleChange('fontWeight', currentFontWeight === 'bold' ? 'normal' : 'bold')}
+                        className="p-2 rounded-lg transition-all duration-200"
+                        style={{
+                            backgroundColor: currentFontWeight === 'bold' ? 'var(--color-primary)' : 'transparent',
+                            color: currentFontWeight === 'bold' ? 'white' : 'var(--color-text)'
+                        }}
+                        title="Bold"
+                        onMouseEnter={(e) => {
+                            if (currentFontWeight !== 'bold') {
+                                e.currentTarget.style.backgroundColor = 'var(--color-background-secondary)';
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            if (currentFontWeight !== 'bold') {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                            }
+                        }}
+                    >
+                        <Bold className="w-4 h-4" />
+                    </button>
+
+                    {/* Italic */}
+                    <button
+                        onClick={() => onStyleChange('fontStyle', currentFontStyle === 'italic' ? 'normal' : 'italic')}
+                        className="p-2 rounded-lg transition-all duration-200"
+                        style={{
+                            backgroundColor: currentFontStyle === 'italic' ? 'var(--color-primary)' : 'transparent',
+                            color: currentFontStyle === 'italic' ? 'white' : 'var(--color-text)'
+                        }}
+                        title="Italic"
+                    >
+                        <Italic className="w-4 h-4" />
+                    </button>
+
+                    {/* Text Alignment */}
+                    <div className="flex bg-gray-100 rounded-lg p-0.5 mx-1" style={{ backgroundColor: 'var(--color-background-secondary)' }}>
+                        <button
+                            onClick={() => onStyleChange('textAlign', 'left')}
+                            className="p-1.5 rounded transition-all"
+                            style={{
+                                backgroundColor: currentTextAlign === 'left' ? 'var(--color-surface)' : 'transparent',
+                                color: 'var(--color-text)',
+                                boxShadow: currentTextAlign === 'left' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+                            }}
+                            title="Align Left"
+                        >
+                            <AlignLeft className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                            onClick={() => onStyleChange('textAlign', 'center')}
+                            className="p-1.5 rounded transition-all"
+                            style={{
+                                backgroundColor: currentTextAlign === 'center' ? 'var(--color-surface)' : 'transparent',
+                                color: 'var(--color-text)',
+                                boxShadow: currentTextAlign === 'center' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+                            }}
+                            title="Align Center"
+                        >
+                            <AlignCenter className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                            onClick={() => onStyleChange('textAlign', 'right')}
+                            className="p-1.5 rounded transition-all"
+                            style={{
+                                backgroundColor: currentTextAlign === 'right' ? 'var(--color-surface)' : 'transparent',
+                                color: 'var(--color-text)',
+                                boxShadow: currentTextAlign === 'right' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+                            }}
+                            title="Align Right"
+                        >
+                            <AlignRight className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+
+                    {/* Separator */}
+                    <div
+                        className="w-px h-6 mx-1"
+                        style={{ backgroundColor: 'var(--color-border)' }}
+                    />
+                </>
+            )}
+
             {alignmentActions.map((action) => {
                 if (action.separator) {
                     return (

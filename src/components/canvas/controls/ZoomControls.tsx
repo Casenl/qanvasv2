@@ -1,6 +1,8 @@
 import React from 'react';
 import { Plus, Minus } from 'lucide-react';
 
+import { cn } from '@/lib/utils';
+
 interface ZoomControlsProps {
     zoom: number;
     onZoomIn: () => void;
@@ -8,6 +10,7 @@ interface ZoomControlsProps {
     onResetZoom: () => void;
     minZoom?: number;
     maxZoom?: number;
+    className?: string;
 }
 
 /**
@@ -20,14 +23,18 @@ export function ZoomControls({
     onZoomOut,
     onResetZoom,
     minZoom = 0.1,
-    maxZoom = 4.0
+    maxZoom = 4.0,
+    className
 }: ZoomControlsProps) {
     const zoomPercentage = Math.round(zoom * 100);
     const isAtMin = zoom <= minZoom;
     const isAtMax = zoom >= maxZoom;
 
     return (
-        <div className="fixed bottom-6 right-6 flex items-center gap-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 px-3 py-2 z-50">
+        <div className={cn(
+            "fixed bottom-6 right-6 flex items-center gap-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 px-3 py-2 z-50",
+            className
+        )}>
             {/* Zoom Out Button */}
             <button
                 onClick={onZoomOut}

@@ -19,6 +19,8 @@ Welcome to the Qanvas documentation! This guide will help you navigate through a
 - [Solution Builder](features/solution-builder.md) - Solution creation and management
 - [Properties Panel](features/properties-panel.md) - Item properties editing
 - [Canvas Configuration](features/canvas-config.md) - Canvas settings
+- [Shape Text Editing](features/shape-text-editing.md) - Rich text and quick edit in shapes
+- [Shape Snapping](features/shape-snapping.md) - Snapping for shape drag
 
 ### Recent Fixes (2025-12-30)
 - [Snap Zoom Fix](fixes/2025-12-30/snap-zoom-fix.md) - Snap guides at all zoom levels
