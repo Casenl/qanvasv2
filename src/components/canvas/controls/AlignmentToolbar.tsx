@@ -16,10 +16,15 @@ import {
     Minus,
     Bold,
     Italic,
+    Underline,
+    Strikethrough,
     Type
 } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import { LineStylePicker } from './LineStylePicker';
+import { FontFamilyPicker } from './FontFamilyPicker';
+import { LineHeightPicker } from './LineHeightPicker';
+import { LetterSpacingControl } from './LetterSpacingControl';
 
 export interface AlignmentAction {
     id: string;
@@ -73,9 +78,14 @@ export function AlignmentToolbar({
     let currentStrokeStyle = 'solid';
     let currentTextColor = '#000000';
     let currentFontSize = 14;
+    let currentFontFamily = 'Inter, sans-serif';
     let currentFontWeight = 'normal';
     let currentFontStyle = 'normal';
     let currentTextAlign = 'center';
+    let currentUnderline = false;
+    let currentStrikethrough = false;
+    let currentLineHeight = 1.5;
+    let currentLetterSpacing = 0;
 
     if (firstItem) {
         if (firstItem.entityType === 'shape') {
@@ -86,15 +96,25 @@ export function AlignmentToolbar({
 
             currentTextColor = firstItem.data?.textColor || currentTextColor;
             currentFontSize = firstItem.data?.fontSize || currentFontSize;
+            currentFontFamily = firstItem.data?.fontFamily || currentFontFamily;
             currentFontWeight = firstItem.data?.fontWeight || currentFontWeight;
             currentFontStyle = firstItem.data?.fontStyle || currentFontStyle;
             currentTextAlign = firstItem.data?.textAlign || currentTextAlign;
+            currentUnderline = firstItem.data?.underline || false;
+            currentStrikethrough = firstItem.data?.strikethrough || false;
+            currentLineHeight = firstItem.data?.lineHeight || currentLineHeight;
+            currentLetterSpacing = firstItem.data?.letterSpacing || currentLetterSpacing;
         } else if (firstItem.entityType === 'text') {
             currentTextColor = firstItem.data?.color || currentTextColor;
             currentFontSize = firstItem.data?.fontSize || currentFontSize;
+            currentFontFamily = firstItem.data?.fontFamily || currentFontFamily;
             currentFontWeight = firstItem.data?.bold ? 'bold' : 'normal';
             currentFontStyle = firstItem.data?.italic ? 'italic' : 'normal';
             currentTextAlign = firstItem.data?.align || currentTextAlign;
+            currentUnderline = firstItem.data?.underline || false;
+            currentStrikethrough = firstItem.data?.strikethrough || false;
+            currentLineHeight = firstItem.data?.lineHeight || currentLineHeight;
+            currentLetterSpacing = firstItem.data?.letterSpacing || currentLetterSpacing;
             currentFillColor = 'transparent';
         } else if (firstItem.entityType === 'sticky-note') {
             currentFillColor = firstItem.data?.color || currentFillColor;
@@ -336,6 +356,82 @@ export function AlignmentToolbar({
                         <Italic className="w-4 h-4" />
                     </button>
 
+                    {/* Underline */}
+                    <button
+                        onClick={() => onStyleChange('underline', !currentUnderline)}
+                        className="p-2 rounded-lg transition-all duration-200"
+                        style={{
+                            backgroundColor: currentUnderline ? 'var(--color-primary)' : 'transparent',
+                            color: currentUnderline ? 'white' : 'var(--color-text)'
+                        }}
+                        title="Underline"
+                        onMouseEnter={(e) => {
+                            if (!currentUnderline) {
+                                e.currentTarget.style.backgroundColor = 'var(--color-background-secondary)';
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            if (!currentUnderline) {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                            }
+                        }}
+                    >
+                        <Underline className="w-4 h-4" />
+                    </button>
+
+                    {/* Strikethrough */}
+                    <button
+                        onClick={() => onStyleChange('strikethrough', !currentStrikethrough)}
+                        className="p-2 rounded-lg transition-all duration-200"
+                        style={{
+                            backgroundColor: currentStrikethrough ? 'var(--color-primary)' : 'transparent',
+                            color: currentStrikethrough ? 'white' : 'var(--color-text)'
+                        }}
+                        title="Strikethrough"
+                        onMouseEnter={(e) => {
+                            if (!currentStrikethrough) {
+                                e.currentTarget.style.backgroundColor = 'var(--color-background-secondary)';
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            if (!currentStrikethrough) {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                            }
+                        }}
+                    >
+                        <Strikethrough className="w-4 h-4" />
+                    </button>
+
+                    {/* Separator */}
+                    <div
+                        className="w-px h-6 mx-1"
+                        style={{ backgroundColor: 'var(--color-border)' }}
+                    />
+
+                    {/* Font Family */}
+                    <FontFamilyPicker
+                        value={currentFontFamily}
+                        onChange={(fontFamily) => onStyleChange('fontFamily', fontFamily)}
+                    />
+
+                    {/* Line Height */}
+                    <LineHeightPicker
+                        value={currentLineHeight}
+                        onChange={(lineHeight) => onStyleChange('lineHeight', lineHeight)}
+                    />
+
+                    {/* Letter Spacing */}
+                    <LetterSpacingControl
+                        value={currentLetterSpacing}
+                        onChange={(spacing) => onStyleChange('letterSpacing', spacing)}
+                    />
+
+                    {/* Separator */}
+                    <div
+                        className="w-px h-6 mx-1"
+                        style={{ backgroundColor: 'var(--color-border)' }}
+                    />
+
                     {/* Text Alignment */}
                     <div className="flex bg-gray-100 rounded-lg p-0.5 mx-1" style={{ backgroundColor: 'var(--color-background-secondary)' }}>
                         <button
@@ -385,6 +481,17 @@ export function AlignmentToolbar({
             )}
 
             {alignmentActions.map((action) => {
+                // Hide align and distribute buttons when only 1 item is selected
+                const isAlignOrDistribute = action.id.startsWith('align-') || action.id.startsWith('distribute-');
+                if (isAlignOrDistribute && selectedCount < 2) {
+                    return null;
+                }
+
+                // Hide separators before align/distribute section when only 1 item selected
+                if (action.id === 'separator-1' && selectedCount < 2) {
+                    return null;
+                }
+
                 if (action.separator) {
                     return (
                         <div

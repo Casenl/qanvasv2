@@ -29,9 +29,14 @@ export interface ShapeData {
     text?: string;
     textColor?: string;
     fontSize?: number;
+    fontFamily?: string;
     fontWeight?: 'normal' | 'bold';
     fontStyle?: 'normal' | 'italic';
     textAlign?: 'left' | 'center' | 'right';
+    underline?: boolean;
+    strikethrough?: boolean;
+    lineHeight?: number;
+    letterSpacing?: number;
 }
 
 export interface TextData {
@@ -42,7 +47,10 @@ export interface TextData {
     bold?: boolean;
     italic?: boolean;
     underline?: boolean;
+    strikethrough?: boolean;
     align?: 'left' | 'center' | 'right';
+    lineHeight?: number;
+    letterSpacing?: number;
     width?: number;
     height?: number;
 }
@@ -94,7 +102,9 @@ export const DEFAULT_TEXT_STYLE: Partial<TextData> = {
     fontSize: 16,
     fontFamily: 'Inter, sans-serif',
     color: '#000000',
-    align: 'left'
+    align: 'left',
+    lineHeight: 1.5,
+    letterSpacing: 0
 };
 
 export const STICKY_NOTE_COLORS = [

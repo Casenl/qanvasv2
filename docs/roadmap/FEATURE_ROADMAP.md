@@ -93,189 +93,94 @@
 
 ---
 
-## 🚧 **In Progress / High Priority**
 
-### **🎨 Floating Canvas Toolbar** (P0 - HIGHEST PRIORITY)
-**Status**: Not started  
+## ✅ **Recently Completed**
+
+### **🎨 Floating Canvas Toolbar** (P0 - COMPLETED)
+**Status**: ✅ Complete  
+**Completed**: December 2025  
 **Reference**: Miro-style left sidebar toolbar  
-**Estimated Time**: 8-10 hours
 
 **Features**:
-- ⬜ **Floating toolbar** on left side of canvas (like Miro)
-- ⬜ **Tool selection** mode (select, draw, shape, text, etc.)
-- ⬜ **Quick access** to canvas tools
-- ⬜ **Collapsible** sections for shapes/lines
-- ⬜ **Sticky notes** tool
-- ⬜ **Image upload** tool
+- ✅ **Floating toolbar** on left side of canvas (like Miro)
+- ✅ **Tool selection** mode (select, draw, shape, text, etc.)
+- ✅ **Quick access** to canvas tools
+- ✅ **Collapsible** sections for shapes/lines
+- ✅ **Sticky notes** tool
+- ✅ **Image upload** tool
+- ✅ **Frame** tool
+- ✅ **Comment** tool
 
-**Tools to Include**:
-```
-┌─────────┐
-│    ↖    │  Select tool (default)
-│    ✏    │  Pen/Draw tool
-│    ▭    │  Shape tool (expands)
-│    T    │  Text tool
-│    →    │  Arrow/Line tool (expands)
-│    📝   │  Sticky note
-│    🖼   │  Image upload
-│    ⊞    │  Frame/Section
-│    💬   │  Comment
-│    ⚙    │  Settings
-└─────────┘
-```
-
-**Shape Tool Expansion** (like Miro):
-```
-Pen tools:
-- ✏ Pen (freehand)
-- / Line
-- ↗ Arrow
-- ⤴ Elbow connector
-
-Shapes:
-- ▭ Rectangle
-- ○ Circle
-- ◇ Diamond
-- ⬟ Hexagon
-- ⭐ Star
-- ♥ Heart
-- → More shapes...
-```
-
----
-
-### **📐 Basic Shapes & Drawing** (P0 - HIGHEST PRIORITY)
-**Status**: Not started  
-**Reference**: Miro shape tools  
-**Estimated Time**: 12-15 hours
+### **📐 Basic Shapes & Drawing** (P0 - COMPLETED)
+**Status**: ✅ Complete  
+**Completed**: December 2025  
 
 **Core Shapes**:
-- ⬜ **Rectangle** - Basic rectangle with rounded corners option
-- ⬜ **Circle/Ellipse** - Perfect circles and ovals
-- ⬜ **Triangle** - Equilateral and isosceles
-- ⬜ **Diamond** - 45° rotated square
-- ⬜ **Hexagon** - Regular hexagon
-- ⬜ **Star** - 5-point star (customizable points)
-- ⬜ **Arrow** - Block arrow shapes
-- ⬜ **Cloud** - Speech bubble/cloud shape
-- ⬜ **Heart** - Heart shape
-
-**Lines & Connectors**:
-- ⬜ **Straight line** - Simple line with endpoints
-- ⬜ **Arrow** - Line with arrow head(s)
-- ⬜ **Elbow connector** - 90° angle connector
-- ⬜ **Curved connector** - Bezier curve connector
-- ⬜ **Freehand pen** - Draw custom paths
+- ✅ **Rectangle** - Basic rectangle with rounded corners option
+- ✅ **Circle/Ellipse** - Perfect circles and ovals
+- ✅ **Triangle** - Equilateral triangle
+- ✅ **Diamond** - 45° rotated square
+- ✅ **Hexagon** - Regular hexagon
+- ✅ **Star** - 5-point star
+- ✅ **Heart** - Heart shape
 
 **Drawing Features**:
-- ⬜ Click-and-drag to create
-- ⬜ Shift to constrain proportions
-- ⬜ Alt to draw from center
-- ⬜ Snap to grid/guides
-- ⬜ Preview while drawing
+- ✅ Click-and-drag to create
+- ✅ Shift to constrain proportions
+- ✅ Snap to grid/guides
+- ✅ Preview while drawing
 
----
-
-### **🔄 Resize & Rotate** (P0 - HIGHEST PRIORITY)
-**Status**: Not started  
-**Estimated Time**: 10-12 hours
+### **🔄 Resize & Rotate** (P0 - COMPLETED)
+**Status**: ✅ Complete  
+**Completed**: December 2025  
 
 **Resize Features**:
-- ⬜ **Corner handles** - Resize from corners (8 handles)
-- ⬜ **Edge handles** - Resize from edges (4 handles)
-- ⬜ **Proportional resize** - Shift key to maintain aspect ratio
-- ⬜ **Resize from center** - Alt key to resize from center
-- ⬜ **Min/max size** constraints
-- ⬜ **Visual feedback** - Show dimensions while resizing
-- ⬜ **Snap while resizing** - Snap to other items
+- ✅ **Corner handles** - Resize from corners (4 handles)
+- ✅ **Edge handles** - Resize from edges (4 handles)
+- ✅ **Proportional resize** - Shift key to maintain aspect ratio
+- ✅ **Min/max size** constraints
+- ✅ **Visual feedback** - Show dimensions while resizing
+- ✅ **Snap while resizing** - Snap to other items
 
 **Rotate Features**:
-- ⬜ **Rotation handle** - Circular handle above item
-- ⬜ **Free rotation** - Any angle
-- ⬜ **Snap rotation** - Shift for 15° increments
-- ⬜ **Rotation indicator** - Show angle while rotating
-- ⬜ **Rotate around center** - Default pivot point
-- ⬜ **Custom pivot point** - Advanced feature
-
-**Visual Indicators**:
-```
-     ↻ Rotation handle
-     ●
-   ●───●
-   │   │  ← Resize handles (8 corners + edges)
-   ●───●
-     ●
-```
+- ✅ **Rotation handle** - Circular handle above item
+- ✅ **Free rotation** - Any angle
+- ✅ **Snap rotation** - Shift for 15° increments
+- ✅ **Rotation indicator** - Show angle while rotating
+- ✅ **Rotate around center** - Default pivot point
 
 **Multi-select Resize/Rotate**:
-- ⬜ Resize all selected items together
-- ⬜ Rotate all selected items together
-- ⬜ Maintain relative positions
-- ⬜ Proportional scaling option
+- ✅ Resize all selected items together
+- ✅ Rotate all selected items together
+- ✅ Maintain relative positions
 
----
-
-### **✍️ Enhanced Text Features** (P0 - HIGHEST PRIORITY)
-**Status**: Partially implemented  
-**Reference**: Miro text toolbar  
-**Estimated Time**: 8-10 hours
+### **✍️ Enhanced Text Features** (P0/P1 - COMPLETED)
+**Status**: ✅ Complete  
+**Completed**: January 3, 2026  
+**Documentation**: `docs/features/enhanced-text-formatting.md`
 
 **Text Creation**:
-- ⬜ **Text tool** in floating toolbar
-- ⬜ **Click to add** text box
-- ⬜ **Double-click item** to edit text
-- ⬜ **Auto-resize** text box to content
-- ⬜ **Fixed-width** text box option
-- ⬜ **Multi-line** support
+- ✅ **Text tool** in floating toolbar
+- ✅ **Click to add** text box
+- ✅ **Double-click item** to edit text
+- ✅ **Auto-resize** text box to content
+- ✅ **Multi-line** support
 
-**Text Formatting** (Floating Toolbar):
-```
-┌──────────────────────────────────────────────────────────┐
-│ T [Noto Sans ▼] [14 ▼] B I U │ ≡ ≡ ≡ │ 🎨 │ • 1. │ 🔗 │
-└──────────────────────────────────────────────────────────┘
-   Font        Size  Style    Align   Color List  Link
-```
-
-**Font Options**:
-- ⬜ **Font family** dropdown
-  - Inter (default)
-  - Noto Sans
-  - Roboto
-  - Arial
-  - Times New Roman
-  - Courier New
-  - Comic Sans MS
-  - Custom fonts...
-
-**Font Sizes**:
-- ⬜ **Size dropdown**: 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64, 72
-- ⬜ **Custom size** input
-- ⬜ **Keyboard shortcuts**: Ctrl+Shift+> (increase), Ctrl+Shift+< (decrease)
-
-**Text Styling**:
-- ⬜ **Bold** (B) - Ctrl+B
-- ⬜ **Italic** (I) - Ctrl+I
-- ⬜ **Underline** (U) - Ctrl+U
-- ⬜ **Strikethrough** - Ctrl+Shift+X
-- ⬜ **Highlight** - Background color
-- ⬜ **Text color** - Foreground color
-
-**Text Alignment**:
-- ⬜ **Left align** - Default
-- ⬜ **Center align**
-- ⬜ **Right align**
-- ⬜ **Justify**
-
-**Advanced Text**:
-- ⬜ **Line height** control
-- ⬜ **Letter spacing** control
-- ⬜ **Bullet lists**
-- ⬜ **Numbered lists**
-- ⬜ **Hyperlinks**
-- ⬜ **Text rotation** (with item)
-- ⬜ **Vertical text** option
+**Text Formatting**:
+- ✅ **Font family** dropdown (Inter, Noto Sans, Roboto, Arial, etc.)
+- ✅ **Font size** input (8-72pt)
+- ✅ **Bold** (B) - Toggle
+- ✅ **Italic** (I) - Toggle
+- ✅ **Underline** (U) - Toggle
+- ✅ **Strikethrough** - Toggle
+- ✅ **Text color** picker
+- ✅ **Text alignment** (left/center/right)
+- ✅ **Line height** control (Tight, Normal, Relaxed, Loose)
+- ✅ **Letter spacing** control (-2px to +10px)
 
 ---
+
+## 🚧 **In Progress / High Priority**
 
 ### **Context Toolbar Extensions** (P1)
 **Status**: Partially implemented  

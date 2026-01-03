@@ -536,7 +536,10 @@ export function CanvasBoard() {
                     selectedItems={items.filter(it => multiSelect.selectedIds.includes(it.id))}
                     onStyleChange={(property, value) => {
                         // Determine if this is a text property or a style property
-                        const textProperties = ['textColor', 'fontSize', 'fontWeight', 'fontStyle', 'textAlign'];
+                        const textProperties = [
+                            'textColor', 'fontSize', 'fontFamily', 'fontWeight', 'fontStyle', 'textAlign',
+                            'underline', 'strikethrough', 'lineHeight', 'letterSpacing'
+                        ];
                         const isTextProperty = textProperties.includes(property);
 
                         // Update for all selected stylable items
@@ -571,9 +574,14 @@ export function CanvasBoard() {
                                 const newItem = { ...item, data: { ...item.data } };
                                 if (property === 'textColor') newItem.data.color = value;
                                 else if (property === 'fontSize') newItem.data.fontSize = value;
+                                else if (property === 'fontFamily') newItem.data.fontFamily = value;
                                 else if (property === 'fontWeight') newItem.data.bold = value === 'bold';
                                 else if (property === 'fontStyle') newItem.data.italic = value === 'italic';
                                 else if (property === 'textAlign') newItem.data.align = value;
+                                else if (property === 'underline') newItem.data.underline = value;
+                                else if (property === 'strikethrough') newItem.data.strikethrough = value;
+                                else if (property === 'lineHeight') newItem.data.lineHeight = value;
+                                else if (property === 'letterSpacing') newItem.data.letterSpacing = value;
                                 return newItem;
                             } else if (item.entityType === 'sticky-note') {
                                 // Map properties for Note renderer
@@ -588,7 +596,7 @@ export function CanvasBoard() {
                             }
                             return item;
                         }));
-                        setDebugInfo(`Updated ${property} for ${multiSelect.selectedIds.length} shapes`);
+                        setDebugInfo(`Updated ${property} for ${multiSelect.selectedIds.length} items`);
                     }}
                     position={toolbarPosition}
                 />

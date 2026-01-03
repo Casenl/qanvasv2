@@ -303,9 +303,13 @@ export function ShapeRenderer({ data, isSelected = false, onClick, onUpdate }: S
                             outline: 'none',
                             color: data.textColor || '#000000',
                             fontSize: `${data.fontSize || 14}px`,
+                            fontFamily: data.fontFamily || 'Inter, sans-serif',
                             fontWeight: data.fontWeight || 'normal',
                             fontStyle: data.fontStyle || 'normal',
                             textAlign: data.textAlign || 'center',
+                            textDecoration: `${data.underline ? 'underline' : ''} ${data.strikethrough ? 'line-through' : ''}`.trim() || 'none',
+                            lineHeight: data.lineHeight || 1.5,
+                            letterSpacing: `${data.letterSpacing || 0}px`,
                             cursor: 'text',
                             whiteSpace: 'pre-wrap',
                             wordBreak: 'break-word'
@@ -316,12 +320,15 @@ export function ShapeRenderer({ data, isSelected = false, onClick, onUpdate }: S
                         style={{
                             color: data.textColor || '#000000',
                             fontSize: `${data.fontSize || 14}px`,
+                            fontFamily: data.fontFamily || 'Inter, sans-serif',
                             fontWeight: data.fontWeight || 'normal',
                             fontStyle: data.fontStyle || 'normal',
                             textAlign: data.textAlign || 'center',
+                            textDecoration: `${data.underline ? 'underline' : ''} ${data.strikethrough ? 'line-through' : ''}`.trim() || 'none',
+                            lineHeight: data.lineHeight || 1.5,
+                            letterSpacing: `${data.letterSpacing || 0}px`,
                             width: '100%',
                             wordWrap: 'break-word',
-                            lineHeight: '1.4',
                             cursor: onUpdate ? 'text' : 'default',
                             userSelect: 'none'
                         }}
