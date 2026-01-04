@@ -63,10 +63,11 @@ export function useCanvasDrop({ onItemAdd, onToolReset, screenToCanvas }: UseCan
                 data: {
                     content: 'Double-click to edit',
                     fontSize: 16,
+                    fontFamily: 'Titillium Web, sans-serif',
                     color: '#000000',
                     align: 'left',
                     width: 200,
-                    height: 50
+                    height: 60
                 },
                 locked: false
             };

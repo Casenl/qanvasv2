@@ -87,10 +87,9 @@ export function TextRenderer({ data, isSelected = false, onClick, onUpdate }: Te
             style={{
                 cursor: isEditing ? 'text' : 'pointer',
                 padding: '8px',
-                border: isSelected ? '2px solid #3b82f6' : '2px solid transparent',
-                borderRadius: '4px',
-                backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.05)' : 'transparent',
-                transition: 'all 0.2s'
+                width: '100%',
+                height: '100%',
+                boxSizing: 'border-box'
             }}
         >
             {isEditing ? (

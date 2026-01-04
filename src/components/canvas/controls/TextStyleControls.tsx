@@ -2,8 +2,6 @@ import React from 'react';
 import { Type, Bold, Italic, Underline, Strikethrough } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import { FontFamilyPicker } from './FontFamilyPicker';
-import { LineHeightPicker } from './LineHeightPicker';
-import { LetterSpacingControl } from './LetterSpacingControl';
 
 export interface TextStyleControlsProps {
     textColor: string;
@@ -13,8 +11,6 @@ export interface TextStyleControlsProps {
     fontStyle: string;
     underline: boolean;
     strikethrough: boolean;
-    lineHeight: number;
-    letterSpacing: number;
     onTextColorChange: (color: string) => void;
     onFontSizeChange: (size: number) => void;
     onFontFamilyChange: (family: string) => void;
@@ -22,8 +18,6 @@ export interface TextStyleControlsProps {
     onItalicToggle: () => void;
     onUnderlineToggle: () => void;
     onStrikethroughToggle: () => void;
-    onLineHeightChange: (height: number) => void;
-    onLetterSpacingChange: (spacing: number) => void;
 }
 
 /**
@@ -34,8 +28,6 @@ export interface TextStyleControlsProps {
  * - Font size input
  * - Font family picker
  * - Bold, italic, underline, strikethrough toggles
- * - Line height picker
- * - Letter spacing control
  */
 export function TextStyleControls({
     textColor,
@@ -45,17 +37,13 @@ export function TextStyleControls({
     fontStyle,
     underline,
     strikethrough,
-    lineHeight,
-    letterSpacing,
     onTextColorChange,
     onFontSizeChange,
     onFontFamilyChange,
     onBoldToggle,
     onItalicToggle,
     onUnderlineToggle,
-    onStrikethroughToggle,
-    onLineHeightChange,
-    onLetterSpacingChange
+    onStrikethroughToggle
 }: TextStyleControlsProps) {
     return (
         <>
@@ -142,18 +130,6 @@ export function TextStyleControls({
             >
                 <Strikethrough className="w-4 h-4" />
             </button>
-
-            {/* Line Height */}
-            <LineHeightPicker
-                value={lineHeight}
-                onChange={onLineHeightChange}
-            />
-
-            {/* Letter Spacing */}
-            <LetterSpacingControl
-                value={letterSpacing}
-                onChange={onLetterSpacingChange}
-            />
         </>
     );
 }

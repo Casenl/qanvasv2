@@ -19,6 +19,7 @@ import { ColorPicker } from './ColorPicker';
 import { StrokeControls } from './StrokeControls';
 import { TextStyleControls } from './TextStyleControls';
 import { LabelStyleControls } from './LabelStyleControls';
+import { AlignDistributeDropdown } from './AlignDistributeDropdown';
 
 export interface AlignmentAction {
     id: string;
@@ -78,8 +79,6 @@ export function AlignmentToolbar({
     let currentTextAlign = 'center';
     let currentUnderline = false;
     let currentStrikethrough = false;
-    let currentLineHeight = 1.5;
-    let currentLetterSpacing = 0;
 
     if (firstItem) {
         if (firstItem.entityType === 'shape') {
@@ -96,8 +95,6 @@ export function AlignmentToolbar({
             currentTextAlign = firstItem.data?.textAlign || currentTextAlign;
             currentUnderline = firstItem.data?.underline || false;
             currentStrikethrough = firstItem.data?.strikethrough || false;
-            currentLineHeight = firstItem.data?.lineHeight || currentLineHeight;
-            currentLetterSpacing = firstItem.data?.letterSpacing || currentLetterSpacing;
         } else if (firstItem.entityType === 'text') {
             currentTextColor = firstItem.data?.color || currentTextColor;
             currentFontSize = firstItem.data?.fontSize || currentFontSize;
@@ -107,8 +104,6 @@ export function AlignmentToolbar({
             currentTextAlign = firstItem.data?.align || currentTextAlign;
             currentUnderline = firstItem.data?.underline || false;
             currentStrikethrough = firstItem.data?.strikethrough || false;
-            currentLineHeight = firstItem.data?.lineHeight || currentLineHeight;
-            currentLetterSpacing = firstItem.data?.letterSpacing || currentLetterSpacing;
             currentFillColor = 'transparent';
         } else if (firstItem.entityType === 'sticky-note') {
             currentFillColor = firstItem.data?.color || currentFillColor;
@@ -146,107 +141,6 @@ export function AlignmentToolbar({
             }
         }
     }
-
-    const alignmentActions: AlignmentAction[] = [
-        {
-            id: 'align-left',
-            label: 'Align Left',
-            icon: <AlignLeft className="w-4 h-4" />,
-            action: () => onAlign('left'),
-            disabled: needsMultiple
-        },
-        {
-            id: 'align-center',
-            label: 'Align Center',
-            icon: <AlignCenter className="w-4 h-4" />,
-            action: () => onAlign('center'),
-            disabled: needsMultiple
-        },
-        {
-            id: 'align-right',
-            label: 'Align Right',
-            icon: <AlignRight className="w-4 h-4" />,
-            action: () => onAlign('right'),
-            disabled: needsMultiple
-        },
-        {
-            id: 'align-top',
-            label: 'Align Top',
-            icon: <AlignVerticalJustifyStart className="w-4 h-4" />,
-            action: () => onAlign('top'),
-            disabled: needsMultiple
-        },
-        {
-            id: 'align-middle',
-            label: 'Align Middle',
-            icon: <AlignVerticalJustifyCenter className="w-4 h-4" />,
-            action: () => onAlign('middle'),
-            disabled: needsMultiple
-        },
-        {
-            id: 'align-bottom',
-            label: 'Align Bottom',
-            icon: <AlignVerticalJustifyEnd className="w-4 h-4" />,
-            action: () => onAlign('bottom'),
-            disabled: needsMultiple
-        },
-        {
-            id: 'separator-1',
-            label: '',
-            icon: null,
-            action: () => { },
-            separator: true
-        },
-        {
-            id: 'distribute-horizontal',
-            label: 'Distribute Horizontally',
-            icon: <SeparatorVertical className="w-4 h-4" />,
-            action: () => onDistribute('horizontal'),
-            disabled: needsThree
-        },
-        {
-            id: 'distribute-vertical',
-            label: 'Distribute Vertically',
-            icon: <SeparatorHorizontal className="w-4 h-4" />,
-            action: () => onDistribute('vertical'),
-            disabled: needsThree
-        },
-        {
-            id: 'separator-2',
-            label: '',
-            icon: null,
-            action: () => { },
-            separator: true
-        },
-        {
-            id: 'group',
-            label: isGrouped ? 'Ungroup' : 'Group',
-            icon: isGrouped ? <Ungroup className="w-4 h-4" /> : <Users className="w-4 h-4" />,
-            action: onGroup,
-            disabled: needsMultiple
-        },
-        {
-            id: 'lock',
-            label: isLocked ? 'Unlock' : 'Lock',
-            icon: isLocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />,
-            action: onLock,
-            disabled: !hasSelection
-        },
-        {
-            id: 'separator-3',
-            label: '',
-            icon: null,
-            action: () => { },
-            separator: true
-        },
-        {
-            id: 'create-solution',
-            label: 'Create Solution',
-            icon: <Package className="w-4 h-4" />,
-            action: onCreateSolution || (() => { }),
-            disabled: needsMultiple || !onCreateSolution
-        }
-    ];
 
     // Show toolbar if there is a selection (even single item for lock/unlock) if position is provided (floating mode)
     // Or stick to original behavior for bottom bar mode (needs multiple)
@@ -309,8 +203,6 @@ export function AlignmentToolbar({
                                 fontStyle={currentFontStyle}
                                 underline={currentUnderline}
                                 strikethrough={currentStrikethrough}
-                                lineHeight={currentLineHeight}
-                                letterSpacing={currentLetterSpacing}
                                 onTextColorChange={(color) => onStyleChange('textColor', color)}
                                 onFontSizeChange={(size) => onStyleChange('fontSize', size)}
                                 onFontFamilyChange={(family) => onStyleChange('fontFamily', family)}
@@ -318,8 +210,6 @@ export function AlignmentToolbar({
                                 onItalicToggle={() => onStyleChange('fontStyle', currentFontStyle === 'italic' ? 'normal' : 'italic')}
                                 onUnderlineToggle={() => onStyleChange('underline', !currentUnderline)}
                                 onStrikethroughToggle={() => onStyleChange('strikethrough', !currentStrikethrough)}
-                                onLineHeightChange={(height) => onStyleChange('lineHeight', height)}
-                                onLetterSpacingChange={(spacing) => onStyleChange('letterSpacing', spacing)}
                             />
 
                             {/* Separator */}
@@ -430,41 +320,69 @@ export function AlignmentToolbar({
                 </>
             )}
 
-            {alignmentActions.map((action) => {
-                // Hide align and distribute buttons when only 1 item is selected
-                const isAlignOrDistribute = action.id.startsWith('align-') || action.id.startsWith('distribute-');
-                if (isAlignOrDistribute && selectedCount < 2) {
-                    return null;
-                }
 
-                // Hide separators before align/distribute section when only 1 item selected
-                if (action.id === 'separator-1' && selectedCount < 2) {
-                    return null;
-                }
+            {/* Align & Distribute Dropdown - Only show when 2+ items selected */}
+            {selectedCount >= 2 && (
+                <>
+                    <AlignDistributeDropdown
+                        onAlign={onAlign}
+                        onDistribute={onDistribute}
+                        needsMultiple={needsMultiple}
+                        needsThree={needsThree}
+                    />
 
-                if (action.separator) {
-                    return (
+                    {/* Separator */}
+                    <div
+                        className="w-px h-6 mx-1"
+                        style={{ backgroundColor: 'var(--color-border)' }}
+                    />
+                </>
+            )}
+
+            {/* Group/Ungroup Button */}
+            {selectedCount >= 2 && (
+                <button
+                    onClick={onGroup}
+                    disabled={needsMultiple}
+                    title={isGrouped ? 'Ungroup' : 'Group'}
+                    className="p-2 rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{
+                        color: needsMultiple ? 'var(--color-text-muted)' : 'var(--color-text)',
+                        backgroundColor: 'transparent'
+                    }}
+                    onMouseEnter={(e) => {
+                        if (!needsMultiple) {
+                            e.currentTarget.style.backgroundColor = 'var(--color-background-secondary)';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                >
+                    {isGrouped ? <Ungroup className="w-4 h-4" /> : <Users className="w-4 h-4" />}
+                </button>
+            )}
+
+            {/* Lock/Unlock Button */}
+            {hasSelection && (
+                <>
+                    {selectedCount >= 2 && (
                         <div
-                            key={action.id}
                             className="w-px h-6 mx-1"
                             style={{ backgroundColor: 'var(--color-border)' }}
                         />
-                    );
-                }
-
-                return (
+                    )}
                     <button
-                        key={action.id}
-                        onClick={action.action}
-                        disabled={action.disabled}
-                        title={action.label}
+                        onClick={onLock}
+                        disabled={!hasSelection}
+                        title={isLocked ? 'Unlock' : 'Lock'}
                         className="p-2 rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                         style={{
-                            color: action.disabled ? 'var(--color-text-muted)' : 'var(--color-text)',
-                            backgroundColor: action.disabled ? 'transparent' : 'transparent'
+                            color: !hasSelection ? 'var(--color-text-muted)' : 'var(--color-text)',
+                            backgroundColor: 'transparent'
                         }}
                         onMouseEnter={(e) => {
-                            if (!action.disabled) {
+                            if (hasSelection) {
                                 e.currentTarget.style.backgroundColor = 'var(--color-background-secondary)';
                             }
                         }}
@@ -472,10 +390,40 @@ export function AlignmentToolbar({
                             e.currentTarget.style.backgroundColor = 'transparent';
                         }}
                     >
-                        {action.icon}
+                        {isLocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                     </button>
-                );
-            })}
+                </>
+            )}
+
+            {/* Create Solution Button */}
+            {selectedCount >= 2 && onCreateSolution && (
+                <>
+                    <div
+                        className="w-px h-6 mx-1"
+                        style={{ backgroundColor: 'var(--color-border)' }}
+                    />
+                    <button
+                        onClick={onCreateSolution}
+                        disabled={needsMultiple || !onCreateSolution}
+                        title="Create Solution"
+                        className="p-2 rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                        style={{
+                            color: (needsMultiple || !onCreateSolution) ? 'var(--color-text-muted)' : 'var(--color-text)',
+                            backgroundColor: 'transparent'
+                        }}
+                        onMouseEnter={(e) => {
+                            if (!needsMultiple && onCreateSolution) {
+                                e.currentTarget.style.backgroundColor = 'var(--color-background-secondary)';
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                    >
+                        <Package className="w-4 h-4" />
+                    </button>
+                </>
+            )}
         </div>
     );
 }

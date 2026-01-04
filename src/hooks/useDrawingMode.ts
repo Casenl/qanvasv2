@@ -102,7 +102,9 @@ export function useDrawingMode(config: DrawingModeConfig) {
             fontSize: DEFAULT_TEXT_STYLE.fontSize!,
             fontFamily: DEFAULT_TEXT_STYLE.fontFamily!,
             color: DEFAULT_TEXT_STYLE.color!,
-            align: DEFAULT_TEXT_STYLE.align
+            align: DEFAULT_TEXT_STYLE.align,
+            width: 200,  // Default width for text box
+            height: 60   // Default height for text box
         };
 
         return {
