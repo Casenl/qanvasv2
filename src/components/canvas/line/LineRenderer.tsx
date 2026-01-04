@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { LineData } from '@/lib/types/shapeTypes';
+import { useLabelDragging, calculateLabelPosition } from '@/hooks/useLabelDragging';
 
 interface LineRendererProps {
     data: LineData;
@@ -17,6 +18,7 @@ interface LineRendererProps {
  * - Straight lines with optional arrow heads
  * - Configurable start/end arrows
  * - Stroke styling support
+ * - Draggable labels
  */
 export function LineRenderer({ data, isSelected = false, onClick, onUpdate }: LineRendererProps) {
     const {
@@ -44,8 +46,6 @@ export function LineRenderer({ data, isSelected = false, onClick, onUpdate }: Li
 
     const [isEditingLabel, setIsEditingLabel] = React.useState(false);
     const [editedLabel, setEditedLabel] = React.useState(label || '');
-    const [isDraggingLabel, setIsDraggingLabel] = React.useState(false);
-    const [dragStart, setDragStart] = React.useState<{ x: number; y: number } | null>(null);
     const prevLabelRef = React.useRef(label);
 
     // Auto-enter edit mode when label is first created
@@ -102,73 +102,33 @@ export function LineRenderer({ data, isSelected = false, onClick, onUpdate }: Li
     const relEndX = endX - minX;
     const relEndY = endY - minY;
 
-    // Calculate label position along the line
+    // Calculate line dimensions for label dragging
     const lineLengthX = relEndX - relStartX;
     const lineLengthY = relEndY - relStartY;
     const lineLength = Math.sqrt(lineLengthX * lineLengthX + lineLengthY * lineLengthY);
 
-    // Position along the line (0-1)
-    const labelX = relStartX + lineLengthX * labelPosition;
-    const labelY = relStartY + lineLengthY * labelPosition;
+    // Use label dragging hook
+    const { isDragging: isDraggingLabel, handleLabelMouseDown } = useLabelDragging(
+        labelPosition,
+        labelOffset,
+        lineLengthX,
+        lineLengthY,
+        lineLength,
+        onUpdate,
+        isEditingLabel
+    );
 
-    // Calculate perpendicular offset
-    const perpAngle = Math.atan2(lineLengthY, lineLengthX) + Math.PI / 2;
-    const offsetX = Math.cos(perpAngle) * labelOffset;
-    const offsetY = Math.sin(perpAngle) * labelOffset;
-
-    const finalLabelX = labelX + offsetX;
-    const finalLabelY = labelY + offsetY;
-
-    const handleLabelMouseDown = (e: React.MouseEvent) => {
-        if (isEditingLabel) return;
-        e.stopPropagation();
-        setIsDraggingLabel(true);
-        setDragStart({ x: e.clientX, y: e.clientY });
-    };
-
-    React.useEffect(() => {
-        if (!isDraggingLabel) return;
-
-        const handleMouseMove = (e: MouseEvent) => {
-            if (!dragStart || !onUpdate) return;
-
-            const dx = e.clientX - dragStart.x;
-            const dy = e.clientY - dragStart.y;
-
-            // Calculate new position along line
-            const lineAngle = Math.atan2(lineLengthY, lineLengthX);
-            const dragAngle = Math.atan2(dy, dx);
-
-            // Project drag onto line direction
-            const dragDistance = Math.sqrt(dx * dx + dy * dy);
-            const alongLine = dragDistance * Math.cos(dragAngle - lineAngle);
-            const perpToLine = dragDistance * Math.sin(dragAngle - lineAngle);
-
-            // Update position (clamped to 0-1)
-            const newPosition = Math.max(0, Math.min(1, labelPosition + alongLine / lineLength));
-            const newOffset = labelOffset + perpToLine;
-
-            onUpdate({
-                labelPosition: newPosition,
-                labelOffset: newOffset
-            });
-
-            setDragStart({ x: e.clientX, y: e.clientY });
-        };
-
-        const handleMouseUp = () => {
-            setIsDraggingLabel(false);
-            setDragStart(null);
-        };
-
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', handleMouseUp);
-
-        return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [isDraggingLabel, dragStart, labelPosition, labelOffset, lineLength, lineLengthX, lineLengthY, onUpdate]);
+    // Calculate final label position
+    const labelPos = calculateLabelPosition(
+        relStartX,
+        relStartY,
+        relEndX,
+        relEndY,
+        labelPosition,
+        labelOffset
+    );
+    const finalLabelX = labelPos.x;
+    const finalLabelY = labelPos.y;
 
     const handleLabelDoubleClick = (e: React.MouseEvent) => {
         e.stopPropagation();

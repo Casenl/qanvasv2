@@ -13,18 +13,12 @@ import {
     Users,
     Ungroup,
     Package,
-    Minus,
-    Bold,
-    Italic,
-    Underline,
-    Strikethrough,
     Type
 } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
-import { LineStylePicker } from './LineStylePicker';
-import { FontFamilyPicker } from './FontFamilyPicker';
-import { LineHeightPicker } from './LineHeightPicker';
-import { LetterSpacingControl } from './LetterSpacingControl';
+import { StrokeControls } from './StrokeControls';
+import { TextStyleControls } from './TextStyleControls';
+import { LabelStyleControls } from './LabelStyleControls';
 
 export interface AlignmentAction {
     id: string;
@@ -285,38 +279,14 @@ export function AlignmentToolbar({
                         onChange={(color) => onStyleChange('fillColor', color)}
                         label="Fill Color"
                     />
-                    <ColorPicker
-                        value={currentStrokeColor}
-                        onChange={(color) => onStyleChange('strokeColor', color)}
-                        label="Stroke Color"
-                    />
 
-                    {/* Stroke Width */}
-                    <div className="flex items-center gap-1 px-2">
-                        <Minus className="w-3 h-3" style={{ color: 'var(--color-text-muted)' }} />
-                        <input
-                            type="range"
-                            min="0"
-                            max="10"
-                            step="1"
-                            value={currentStrokeWidth}
-                            onChange={(e) => onStyleChange('strokeWidth', parseInt(e.target.value))}
-                            className="w-16 h-1 rounded-lg appearance-none cursor-pointer"
-                            style={{
-                                background: 'var(--color-border)',
-                                accentColor: 'var(--color-primary)'
-                            }}
-                            title={`Stroke Width: ${currentStrokeWidth}px`}
-                        />
-                        <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                            {currentStrokeWidth}
-                        </span>
-                    </div>
-
-                    {/* Line Style */}
-                    <LineStylePicker
-                        value={currentStrokeStyle}
-                        onChange={(style) => onStyleChange('strokeStyle', style)}
+                    <StrokeControls
+                        strokeColor={currentStrokeColor}
+                        strokeWidth={currentStrokeWidth}
+                        strokeStyle={currentStrokeStyle as 'solid' | 'dashed' | 'dotted'}
+                        onStrokeColorChange={(color) => onStyleChange('strokeColor', color)}
+                        onStrokeWidthChange={(width) => onStyleChange('strokeWidth', width)}
+                        onStrokeStyleChange={(style) => onStyleChange('strokeStyle', style)}
                     />
 
                     {/* Separator - only show if we have text/fill controls coming */}
@@ -331,135 +301,25 @@ export function AlignmentToolbar({
                     {/* Text/Fill Color - only for shapes, text, or pen/line/arrow WITH label */}
                     {selectedItems.some(item => ['shape', 'text', 'sticky-note', 'frame'].includes(item.entityType)) && (
                         <>
-                            {/* Text Color */}
-                            <ColorPicker
-                                value={currentTextColor}
-                                onChange={(color) => onStyleChange('textColor', color)}
-                                label="Text Color"
-                            />
-
-                            {/* Font Size */}
-                            <div className="flex items-center gap-1 px-2">
-                                <Type className="w-3 h-3" style={{ color: 'var(--color-text-muted)' }} />
-                                <input
-                                    type="number"
-                                    min="8"
-                                    max="72"
-                                    value={currentFontSize}
-                                    onChange={(e) => onStyleChange('fontSize', parseInt(e.target.value))}
-                                    className="w-12 px-1 text-xs text-center rounded border"
-                                    style={{
-                                        backgroundColor: 'var(--color-background)',
-                                        borderColor: 'var(--color-border)',
-                                        color: 'var(--color-text)'
-                                    }}
-                                />
-                            </div>
-
-                            {/* Bold */}
-                            <button
-                                onClick={() => onStyleChange('fontWeight', currentFontWeight === 'bold' ? 'normal' : 'bold')}
-                                className="p-2 rounded-lg transition-all duration-200"
-                                style={{
-                                    backgroundColor: currentFontWeight === 'bold' ? 'var(--color-primary)' : 'transparent',
-                                    color: currentFontWeight === 'bold' ? 'white' : 'var(--color-text)'
-                                }}
-                                title="Bold"
-                                onMouseEnter={(e) => {
-                                    if (currentFontWeight !== 'bold') {
-                                        e.currentTarget.style.backgroundColor = 'var(--color-background-secondary)';
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (currentFontWeight !== 'bold') {
-                                        e.currentTarget.style.backgroundColor = 'transparent';
-                                    }
-                                }}
-                            >
-                                <Bold className="w-4 h-4" />
-                            </button>
-
-                            {/* Italic */}
-                            <button
-                                onClick={() => onStyleChange('fontStyle', currentFontStyle === 'italic' ? 'normal' : 'italic')}
-                                className="p-2 rounded-lg transition-all duration-200"
-                                style={{
-                                    backgroundColor: currentFontStyle === 'italic' ? 'var(--color-primary)' : 'transparent',
-                                    color: currentFontStyle === 'italic' ? 'white' : 'var(--color-text)'
-                                }}
-                                title="Italic"
-                            >
-                                <Italic className="w-4 h-4" />
-                            </button>
-
-                            {/* Underline */}
-                            <button
-                                onClick={() => onStyleChange('underline', !currentUnderline)}
-                                className="p-2 rounded-lg transition-all duration-200"
-                                style={{
-                                    backgroundColor: currentUnderline ? 'var(--color-primary)' : 'transparent',
-                                    color: currentUnderline ? 'white' : 'var(--color-text)'
-                                }}
-                                title="Underline"
-                                onMouseEnter={(e) => {
-                                    if (!currentUnderline) {
-                                        e.currentTarget.style.backgroundColor = 'var(--color-background-secondary)';
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (!currentUnderline) {
-                                        e.currentTarget.style.backgroundColor = 'transparent';
-                                    }
-                                }}
-                            >
-                                <Underline className="w-4 h-4" />
-                            </button>
-
-                            {/* Strikethrough */}
-                            <button
-                                onClick={() => onStyleChange('strikethrough', !currentStrikethrough)}
-                                className="p-2 rounded-lg transition-all duration-200"
-                                style={{
-                                    backgroundColor: currentStrikethrough ? 'var(--color-primary)' : 'transparent',
-                                    color: currentStrikethrough ? 'white' : 'var(--color-text)'
-                                }}
-                                title="Strikethrough"
-                                onMouseEnter={(e) => {
-                                    if (!currentStrikethrough) {
-                                        e.currentTarget.style.backgroundColor = 'var(--color-background-secondary)';
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (!currentStrikethrough) {
-                                        e.currentTarget.style.backgroundColor = 'transparent';
-                                    }
-                                }}
-                            >
-                                <Strikethrough className="w-4 h-4" />
-                            </button>
-
-                            {/* Separator */}
-                            <div
-                                className="w-px h-6 mx-1"
-                                style={{ backgroundColor: 'var(--color-border)' }}
-                            />
-
-                            {/* Font Family */}
-                            <FontFamilyPicker
-                                value={currentFontFamily}
-                                onChange={(fontFamily) => onStyleChange('fontFamily', fontFamily)}
-                            />
-
-                            {/* Line Height */}
-                            <LineHeightPicker
-                                value={currentLineHeight}
-                                onChange={(lineHeight) => onStyleChange('lineHeight', lineHeight)}
-                            />
-
-                            {/* Letter Spacing */}
-                            <LetterSpacingControl
-                                value={currentLetterSpacing}
-                                onChange={(spacing) => onStyleChange('letterSpacing', spacing)}
+                            <TextStyleControls
+                                textColor={currentTextColor}
+                                fontSize={currentFontSize}
+                                fontFamily={currentFontFamily}
+                                fontWeight={currentFontWeight}
+                                fontStyle={currentFontStyle}
+                                underline={currentUnderline}
+                                strikethrough={currentStrikethrough}
+                                lineHeight={currentLineHeight}
+                                letterSpacing={currentLetterSpacing}
+                                onTextColorChange={(color) => onStyleChange('textColor', color)}
+                                onFontSizeChange={(size) => onStyleChange('fontSize', size)}
+                                onFontFamilyChange={(family) => onStyleChange('fontFamily', family)}
+                                onBoldToggle={() => onStyleChange('fontWeight', currentFontWeight === 'bold' ? 'normal' : 'bold')}
+                                onItalicToggle={() => onStyleChange('fontStyle', currentFontStyle === 'italic' ? 'normal' : 'italic')}
+                                onUnderlineToggle={() => onStyleChange('underline', !currentUnderline)}
+                                onStrikethroughToggle={() => onStyleChange('strikethrough', !currentStrikethrough)}
+                                onLineHeightChange={(height) => onStyleChange('lineHeight', height)}
+                                onLetterSpacingChange={(spacing) => onStyleChange('letterSpacing', spacing)}
                             />
 
                             {/* Separator */}
@@ -546,71 +406,20 @@ export function AlignmentToolbar({
 
                     {/* Label styling controls - show only if label exists */}
                     {selectedItems[0].data?.label && (
-                        <>
-                            {/* Label Text Color */}
-                            <ColorPicker
-                                value={currentTextColor}
-                                onChange={(color) => onStyleChange('labelColor', color)}
-                                label="Label Color"
-                            />
-
-                            {/* Label Background Color */}
-                            <ColorPicker
-                                value={currentFillColor}
-                                onChange={(color) => onStyleChange('labelBackgroundColor', color)}
-                                label="Label BG"
-                            />
-
-                            {/* Label Font Size */}
-                            <div className="flex items-center gap-1">
-                                <input
-                                    type="range"
-                                    min="8"
-                                    max="48"
-                                    value={currentFontSize}
-                                    onChange={(e) => onStyleChange('labelSize', parseInt(e.target.value))}
-                                    className="w-16"
-                                    title="Label Font Size"
-                                />
-                                <span className="text-xs" style={{ color: 'var(--color-text)', minWidth: '24px' }}>
-                                    {currentFontSize}
-                                </span>
-                            </div>
-
-                            {/* Label Font Family */}
-                            <FontFamilyPicker
-                                value={currentFontFamily}
-                                onChange={(font) => onStyleChange('labelFontFamily', font)}
-                            />
-
-                            {/* Label Bold */}
-                            <button
-                                onClick={() => onStyleChange('labelBold', currentFontWeight !== 'bold')}
-                                className="p-1.5 rounded transition-all"
-                                style={{
-                                    backgroundColor: currentFontWeight === 'bold' ? 'var(--color-surface)' : 'transparent',
-                                    color: 'var(--color-text)',
-                                    boxShadow: currentFontWeight === 'bold' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
-                                }}
-                                title="Bold"
-                            >
-                                <Bold className="w-3.5 h-3.5" />
-                            </button>
-
-                            {/* Label Italic */}
-                            <button
-                                onClick={() => onStyleChange('labelItalic', currentFontStyle !== 'italic')}
-                                className="p-1.5 rounded transition-all"
-                                style={{
-                                    backgroundColor: currentFontStyle === 'italic' ? 'var(--color-surface)' : 'transparent',
-                                    color: 'var(--color-text)',
-                                    boxShadow: currentFontStyle === 'italic' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
-                                }}
-                                title="Italic"
-                            >
-                                <Italic className="w-3.5 h-3.5" />
-                            </button>
-                        </>
+                        <LabelStyleControls
+                            labelColor={currentTextColor}
+                            labelBackgroundColor={currentFillColor}
+                            labelSize={currentFontSize}
+                            labelFontFamily={currentFontFamily}
+                            labelBold={currentFontWeight === 'bold'}
+                            labelItalic={currentFontStyle === 'italic'}
+                            onLabelColorChange={(color) => onStyleChange('labelColor', color)}
+                            onLabelBackgroundChange={(color) => onStyleChange('labelBackgroundColor', color)}
+                            onLabelSizeChange={(size) => onStyleChange('labelSize', size)}
+                            onLabelFontFamilyChange={(font) => onStyleChange('labelFontFamily', font)}
+                            onLabelBoldToggle={() => onStyleChange('labelBold', currentFontWeight !== 'bold')}
+                            onLabelItalicToggle={() => onStyleChange('labelItalic', currentFontStyle !== 'italic')}
+                        />
                     )}
 
                     {/* Separator */}
