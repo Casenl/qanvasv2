@@ -17,9 +17,9 @@ interface DrawingPreviewProps {
 }
 
 /**
- * Component to show preview while drawing (pen, line, arrow)
+ * Component to show preview while drawing (pen, line, arrow, frame)
  * 
- * Shows the path/line being drawn in real-time before it's finalized
+ * Shows the path/line/frame being drawn in real-time before it's finalized
  */
 export function DrawingPreview({ drawingState, activeTool }: DrawingPreviewProps) {
     if (!drawingState?.isDrawing) return null;
@@ -114,6 +114,50 @@ export function DrawingPreview({ drawingState, activeTool }: DrawingPreviewProps
                         />
                     )}
                 </svg>
+            );
+        }
+
+        if (activeTool === 'frame' && drawingState.endX !== undefined && drawingState.endY !== undefined) {
+            // Render frame preview
+            const { startX, startY, endX, endY } = drawingState;
+            const width = Math.abs(endX - startX);
+            const height = Math.abs(endY - startY);
+            const x = Math.min(startX, endX);
+            const y = Math.min(startY, endY);
+
+            return (
+                <div
+                    style={{
+                        position: 'absolute',
+                        left: x,
+                        top: y,
+                        width,
+                        height,
+                        border: '2px dashed #3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderRadius: '4px',
+                        pointerEvents: 'none',
+                        opacity: 0.7
+                    }}
+                >
+                    {/* Show dimensions */}
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: '-24px',
+                            left: '0',
+                            padding: '2px 8px',
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            whiteSpace: 'nowrap'
+                        }}
+                    >
+                        {Math.round(width)} × {Math.round(height)}
+                    </div>
+                </div>
             );
         }
 

@@ -10,8 +10,17 @@ interface FrameRendererProps {
     onUpdate?: (newData: Partial<FrameData>) => void;
 }
 
+/**
+ * Frame renderer component
+ * 
+ * Features:
+ * - Editable title (double-click)
+ * - Customizable background color
+ * - Shows count of contained items
+ * - Visual selection state
+ */
 export function FrameRenderer({ data, isSelected = false, onClick, onUpdate }: FrameRendererProps) {
-    const { width, height, title, color } = data;
+    const { width, height, title, color, containedItemIds = [] } = data;
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [titleValue, setTitleValue] = useState(title);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -29,6 +38,8 @@ export function FrameRenderer({ data, isSelected = false, onClick, onUpdate }: F
             onUpdate({ title: titleValue });
         }
     };
+
+    const itemCount = containedItemIds.length;
 
     return (
         <div
@@ -58,7 +69,10 @@ export function FrameRenderer({ data, isSelected = false, onClick, onUpdate }: F
                     fontSize: '14px',
                     fontWeight: 500,
                     cursor: 'text',
-                    whiteSpace: 'nowrap'
+                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
                 }}
                 onClick={(e) => {
                     // Allow selecting via title click
@@ -88,7 +102,22 @@ export function FrameRenderer({ data, isSelected = false, onClick, onUpdate }: F
                         }}
                     />
                 ) : (
-                    title || 'Frame'
+                    <>
+                        <span>{title || 'Frame'}</span>
+                        {itemCount > 0 && (
+                            <span
+                                style={{
+                                    fontSize: '11px',
+                                    opacity: 0.8,
+                                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                    padding: '1px 6px',
+                                    borderRadius: '10px'
+                                }}
+                            >
+                                {itemCount}
+                            </span>
+                        )}
+                    </>
                 )}
             </div>
         </div>

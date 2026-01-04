@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { ToolType } from './useToolbar';
 import { CanvasItem } from '@/lib/types';
 import {
-    ShapeData, TextData, StickyNoteData, PathData, LineData, ImageData,
+    ShapeData, TextData, StickyNoteData, PathData, LineData, ImageData, FrameData,
     DEFAULT_SHAPE_STYLE, DEFAULT_SHAPE_SIZE, DEFAULT_TEXT_STYLE,
     STICKY_NOTE_COLORS, DEFAULT_PATH_STYLE, DEFAULT_LINE_STYLE
 } from '@/lib/types/shapeTypes';
@@ -164,6 +164,29 @@ export function useDrawingMode(config: DrawingModeConfig) {
             x,
             y,
             data: pathData,
+            locked: false
+        };
+    }, [generateId]);
+
+    /**
+     * Create a frame item
+     */
+    const createFrameItem = useCallback((x: number, y: number, width: number = 400, height: number = 400): CanvasItem => {
+        const frameData: FrameData = {
+            width,
+            height,
+            title: 'New Frame',
+            color: 'rgba(243, 244, 246, 0.2)',
+            containedItemIds: []
+        };
+
+        return {
+            id: generateId('frame'),
+            entityId: generateId('frame-entity'),
+            entityType: 'frame',
+            x,
+            y,
+            data: frameData,
             locked: false
         };
     }, [generateId]);
@@ -331,10 +354,10 @@ export function useDrawingMode(config: DrawingModeConfig) {
             case 'pen':
             case 'line':
             case 'arrow':
+            case 'frame':
                 return 'crosshair';
             case 'sticky-note':
             case 'image':
-            case 'frame':
             case 'comment':
                 return 'pointer';
             default:
@@ -346,8 +369,8 @@ export function useDrawingMode(config: DrawingModeConfig) {
      * Handle mouse down for drawing tools (pen, line, arrow)
      */
     const handleDrawStart = useCallback((e: React.MouseEvent<HTMLDivElement>): boolean => {
-        // Only handle for drawing tools
-        if (!['pen', 'line', 'arrow'].includes(activeTool)) return false;
+        // Only handle for drawing tools (including frame for click-and-drag)
+        if (!['pen', 'line', 'arrow', 'frame'].includes(activeTool)) return false;
 
         // Don't start drawing on existing items
         const target = e.target as HTMLElement;
@@ -384,8 +407,8 @@ export function useDrawingMode(config: DrawingModeConfig) {
                 currentY: y,
                 points: [...(prev.points || []), { x, y }]
             } : null);
-        } else if (activeTool === 'line' || activeTool === 'arrow') {
-            // Update end point
+        } else if (activeTool === 'line' || activeTool === 'arrow' || activeTool === 'frame') {
+            // Update end point (for line, arrow, and frame)
             setDrawingState(prev => prev ? {
                 ...prev,
                 currentX: x,
@@ -418,6 +441,18 @@ export function useDrawingMode(config: DrawingModeConfig) {
                 activeTool === 'arrow'
             );
             setDebugInfo?.(`Created ${activeTool}`);
+        } else if (activeTool === 'frame' && drawingState.endX !== undefined && drawingState.endY !== undefined) {
+            // Create frame item with dragged dimensions
+            const width = Math.abs(drawingState.endX - drawingState.startX);
+            const height = Math.abs(drawingState.endY - drawingState.startY);
+            const x = Math.min(drawingState.startX, drawingState.endX);
+            const y = Math.min(drawingState.startY, drawingState.endY);
+
+            // Only create if dragged area is large enough (min 50x50)
+            if (width > 50 && height > 50) {
+                newItem = createFrameItem(x, y, width, height);
+                setDebugInfo?.(`Created frame ${width}x${height}`);
+            }
         }
 
         if (newItem) {

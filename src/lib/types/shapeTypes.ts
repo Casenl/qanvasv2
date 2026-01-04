@@ -74,6 +74,7 @@ export interface FrameData {
     height: number;
     title: string;
     color: string;
+    containedItemIds?: string[]; // IDs of items within this frame
 }
 
 export interface CommentData {

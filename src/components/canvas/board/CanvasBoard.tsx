@@ -50,6 +50,7 @@ import { useSolutionManager } from '@/hooks/useSolutionManager';
 import { useMetricManager } from '@/hooks/useMetricManager';
 import { useToolbar } from '@/hooks/useToolbar';
 import { useDrawingMode } from '@/hooks/useDrawingMode';
+import { useFrameContainment } from '@/hooks/useFrameContainment';
 import { ZoomControls } from '../controls/ZoomControls';
 import { SolutionDialog } from '../dialogs/SolutionDialog';
 import { CanvasConfiguration, DEFAULT_CANVAS_CONFIG } from '@/lib/types/canvasConfig';
@@ -245,6 +246,87 @@ export function CanvasBoard() {
         onToolReset: () => toolbar.resetToSelect()
     });
 
+    // Frame containment hook (for managing items within frames)
+    const frameContainment = useFrameContainment(items);
+
+    // Auto-update containedItemIds for all frames when items move
+    useEffect(() => {
+        const frames = items.filter(item => item.entityType === 'frame');
+
+        if (frames.length === 0) return;
+
+        let needsUpdate = false;
+        const updates: { id: string; containedItemIds: string[] }[] = [];
+
+        frames.forEach(frame => {
+            const currentContainedIds = frame.data?.containedItemIds || [];
+            const actualContainedIds = frameContainment.getContainedItemIds(frame);
+
+            // Check if the contained items have changed
+            const hasChanged =
+                currentContainedIds.length !== actualContainedIds.length ||
+                !currentContainedIds.every(id => actualContainedIds.includes(id));
+
+            if (hasChanged) {
+                needsUpdate = true;
+                updates.push({
+                    id: frame.id,
+                    containedItemIds: actualContainedIds
+                });
+            }
+        });
+
+        if (needsUpdate) {
+            setItemsWithoutHistory(prevItems =>
+                prevItems.map(item => {
+                    const update = updates.find(u => u.id === item.id);
+                    if (update) {
+                        return {
+                            ...item,
+                            data: {
+                                ...item.data,
+                                containedItemIds: update.containedItemIds
+                            }
+                        };
+                    }
+                    return item;
+                })
+            );
+        }
+    }, [items, frameContainment, setItemsWithoutHistory]);
+
+    // Frame-aware lock handler
+    const handleFrameLock = useCallback(() => {
+        const selectedItems = items.filter(item => multiSelect.selectedIds.includes(item.id));
+        const hasFrame = selectedItems.some(item => item.entityType === 'frame');
+
+        if (hasFrame && selectedItems.length === 1 && selectedItems[0].entityType === 'frame') {
+            // Single frame selected - lock/unlock frame and its contents
+            const frame = selectedItems[0];
+            const isCurrentlyLocked = frame.locked;
+
+            setItems(prev => prev.map(item => {
+                // Lock/unlock the frame itself
+                if (item.id === frame.id) {
+                    return { ...item, locked: !isCurrentlyLocked };
+                }
+
+                // Lock/unlock all contained items
+                const containedIds = frame.data?.containedItemIds || [];
+                if (containedIds.includes(item.id)) {
+                    return { ...item, locked: !isCurrentlyLocked };
+                }
+
+                return item;
+            }));
+
+            setDebugInfo(`Frame and ${frame.data?.containedItemIds?.length || 0} items ${isCurrentlyLocked ? 'unlocked' : 'locked'}`);
+        } else {
+            // Normal lock behavior for non-frame items
+            locking.toggleLock();
+        }
+    }, [items, multiSelect.selectedIds, setItems, locking, setDebugInfo]);
+
 
     // Sync inherited metrics when canvas config changes
     // This also ADDS new metrics if they're set in canvas config after product was placed
@@ -288,7 +370,7 @@ export function CanvasBoard() {
         onNudgeLeft: nudging.nudgeLeft,
         onNudgeRight: nudging.nudgeRight,
         onGroup: alignment.group,
-        onLock: locking.toggleLock,
+        onLock: handleFrameLock,
         onZoomIn: canvasTransform.zoomIn,
         onZoomOut: canvasTransform.zoomOut,
         onZoomReset: canvasTransform.resetZoom,
@@ -529,7 +611,7 @@ export function CanvasBoard() {
                     onAlign={alignment.align}
                     onDistribute={alignment.distribute}
                     onGroup={alignment.group}
-                    onLock={locking.toggleLock}
+                    onLock={handleFrameLock}
                     onCreateSolution={solutionManager.createSolution}
                     isGrouped={multiSelect.selectedIds.length > 0 && items.filter(it => multiSelect.selectedIds.includes(it.id)).every(it => it.groupId)}
                     isLocked={multiSelect.selectedIds.length > 0 && items.filter(it => multiSelect.selectedIds.includes(it.id)).every(it => it.locked)}
