@@ -1,5 +1,6 @@
 import React from 'react';
 import { CanvasItem } from '@/lib/types';
+import { computeGroupFrame } from '@/lib/utils/groupTransform';
 
 interface MultiSelectTransformBoxProps {
   items: CanvasItem[];
@@ -16,50 +17,29 @@ const CORNERS: { id: string; cursor: string }[] = [
 ];
 
 /**
- * Miro-style transform box for a multi-selection / group: a bounding box with four
- * corner resize handles (uniform scale) and a rotate handle. Rendered inside the
- * zoomed canvas container, so positions are in canvas coordinates; handle sizes are
- * divided by zoom to stay a constant visual size. The box border is click-through
- * (so dragging inside it moves the group); only the handles capture pointer events.
+ * Figma/Miro-style transform box for a multi-selection / group: a bounding box with
+ * four corner resize handles (uniform scale) and a rotate handle. When the selection
+ * shares a common rotation the box tilts with it (via computeGroupFrame). Rendered
+ * inside the zoomed canvas container, so positions are canvas coordinates and handle
+ * sizes are divided by zoom to stay constant on screen. The border is click-through
+ * (dragging inside moves the group); only the handles capture pointer events.
  */
 export function MultiSelectTransformBox({ items, selectedIds, zoom, onStartTransform }: MultiSelectTransformBoxProps) {
-  if (selectedIds.length < 2) return null;
+  const frame = computeGroupFrame(items, selectedIds);
+  if (!frame) return null;
 
-  const selectedItems = items.filter((item) => selectedIds.includes(item.id));
-  if (selectedItems.length < 2) return null;
-
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-
-  selectedItems.forEach((item) => {
-    let width = 300;
-    let height = 172;
-    if (item.data && typeof item.data.width === 'number') {
-      width = item.data.width;
-      height = typeof item.data.height === 'number' ? item.data.height : width;
-    }
-    minX = Math.min(minX, item.x);
-    minY = Math.min(minY, item.y);
-    maxX = Math.max(maxX, item.x + width);
-    maxY = Math.max(maxY, item.y + height);
-  });
-
-  const padding = 8 / zoom;
-  minX -= padding;
-  minY -= padding;
-  maxX += padding;
-  maxY += padding;
-
-  const width = maxX - minX;
-  const height = maxY - minY;
+  const pad = 8 / zoom;
+  const x = frame.local.x - pad;
+  const y = frame.local.y - pad;
+  const width = frame.local.width + pad * 2;
+  const height = frame.local.height + pad * 2;
 
   const border = 2 / zoom;
   const handleSize = 12 / zoom;
   const half = handleSize / 2;
   const rotateOffset = 28 / zoom;
 
+  // Local-frame corner positions relative to the box top-left.
   const cornerPos: Record<string, { left: number; top: number }> = {
     nw: { left: 0, top: 0 },
     ne: { left: width, top: 0 },
@@ -68,7 +48,20 @@ export function MultiSelectTransformBox({ items, selectedIds, zoom, onStartTrans
   };
 
   return (
-    <div style={{ position: 'absolute', left: minX, top: minY, width, height, zIndex: 6 }}>
+    <div
+      style={{
+        position: 'absolute',
+        left: x,
+        top: y,
+        width,
+        height,
+        zIndex: 6,
+        // Tilt the whole box (and its handles) with the group, pivoting on the
+        // shared rotation pivot.
+        transform: `rotate(${frame.rotation}deg)`,
+        transformOrigin: `${frame.pivot.x - x}px ${frame.pivot.y - y}px`,
+      }}
+    >
       {/* Bounding border (click-through so the group can be dragged from inside) */}
       <div
         style={{

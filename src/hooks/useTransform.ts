@@ -1,17 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { CanvasItem } from '@/lib/types';
 import { calculateSnapGuides, SnapGuide } from './useSnapGuides';
-
-// Default footprint for items without explicit dimensions (product/vendor/solution cards).
-function getItemDims(item: CanvasItem): { width: number; height: number } {
-  if (item.data && typeof item.data.width === 'number') {
-    return {
-      width: item.data.width,
-      height: typeof item.data.height === 'number' ? item.data.height : item.data.width,
-    };
-  }
-  return { width: 300, height: 172 };
-}
+import { computeGroupFrame, getItemDims, Corner } from '@/lib/utils/groupTransform';
 
 interface TransformState {
   isTransforming: boolean;
@@ -198,34 +188,20 @@ export function useTransform({
       const movers = items.filter((it) => movingIds.has(it.id) && !it.locked);
       if (movers.length === 0) return;
 
-      // Axis-aligned bounding box of the movers (canvas coords).
-      let minX = Infinity,
-        minY = Infinity,
-        maxX = -Infinity,
-        maxY = -Infinity;
+      // Capture initial full state of every mover.
       const initialFull: TransformState['initialFull'] = {};
       movers.forEach((it) => {
         const { width, height } = getItemDims(it);
         initialFull![it.id] = { x: it.x, y: it.y, width, height, rotation: it.rotation || 0 };
-        minX = Math.min(minX, it.x);
-        minY = Math.min(minY, it.y);
-        maxX = Math.max(maxX, it.x + width);
-        maxY = Math.max(maxY, it.y + height);
       });
 
-      const gcx = (minX + maxX) / 2;
-      const gcy = (minY + maxY) / 2;
-
-      // Resize anchor = corner opposite the dragged handle.
-      const corners: Record<string, { x: number; y: number }> = {
-        nw: { x: minX, y: minY },
-        ne: { x: maxX, y: minY },
-        se: { x: maxX, y: maxY },
-        sw: { x: minX, y: maxY },
-      };
-      const opposite: Record<string, string> = { nw: 'se', ne: 'sw', se: 'nw', sw: 'ne' };
-      const anchor = type === 'resize' ? corners[opposite[handle]] : { x: gcx, y: gcy };
-      const startCorner = type === 'resize' ? corners[handle] : { x: maxX, y: maxY };
+      // Shared group frame (rotation-aware pivot + rotated corners) so the box and
+      // this math agree. Falls back to the AABB center if a frame can't be built.
+      const frame = computeGroupFrame(items, selectedIds);
+      const pivot = frame?.pivot ?? { x: 0, y: 0 };
+      const opposite: Record<Corner, Corner> = { nw: 'se', ne: 'sw', se: 'nw', sw: 'ne' };
+      const anchor = type === 'resize' && frame ? frame.corners[opposite[handle as Corner]] : pivot;
+      const startCorner = type === 'resize' && frame ? frame.corners[handle as Corner] : pivot;
 
       setTransformState({
         isTransforming: true,
@@ -238,13 +214,13 @@ export function useTransform({
         startWidth: 0,
         startHeight: 0,
         startRotation: 0,
-        // group center in SCREEN coords (for rotate atan2)
-        centerX: gcx * zoom + pan.x + rect.left,
-        centerY: gcy * zoom + pan.y + rect.top,
+        // group pivot in SCREEN coords (for rotate atan2)
+        centerX: pivot.x * zoom + pan.x + rect.left,
+        centerY: pivot.y * zoom + pan.y + rect.top,
         initialSelections: {},
         isGroup: true,
-        groupCenterCanvasX: gcx,
-        groupCenterCanvasY: gcy,
+        groupCenterCanvasX: pivot.x,
+        groupCenterCanvasY: pivot.y,
         anchorX: anchor.x,
         anchorY: anchor.y,
         startCornerX: startCorner.x,
@@ -312,18 +288,24 @@ export function useTransform({
           const oldDist = Math.hypot(oldVecX, oldVecY) || 1;
           const newDist = Math.hypot(oldVecX + dX, oldVecY + dY);
           const scale = Math.max(0.05, newDist / oldDist);
+          // Scale each member's CENTER (rotation-agnostic) and its size from the anchor.
           Object.entries(initialFull).forEach(([id, init]) => {
-            const nx = anchorX + (init.x - anchorX) * scale;
-            const ny = anchorY + (init.y - anchorY) * scale;
+            const cx0 = init.x + init.width / 2;
+            const cy0 = init.y + init.height / 2;
+            const ncx = anchorX + (cx0 - anchorX) * scale;
+            const ncy = anchorY + (cy0 - anchorY) * scale;
             const item = items.find((i) => i.id === id);
             if (item?.data && typeof item.data.width === 'number') {
+              const nw = init.width * scale;
+              const nh = init.height * scale;
               onUpdate(id, {
-                x: nx,
-                y: ny,
-                data: { ...item.data, width: init.width * scale, height: init.height * scale },
+                x: ncx - nw / 2,
+                y: ncy - nh / 2,
+                data: { ...item.data, width: nw, height: nh },
               });
             } else {
-              onUpdate(id, { x: nx, y: ny });
+              // Cards keep their fixed size; just reposition by the scaled center.
+              onUpdate(id, { x: ncx - init.width / 2, y: ncy - init.height / 2 });
             }
           });
         }
