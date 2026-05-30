@@ -637,3 +637,6 @@ export function useDrawingMode(config: DrawingModeConfig) {
     activeTool,
   };
 }
+
+/** Public shape of the useDrawingMode hook (for typing props that receive it). */
+export type DrawingModeReturn = ReturnType<typeof useDrawingMode>;

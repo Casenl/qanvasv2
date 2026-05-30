@@ -73,3 +73,6 @@ next-development.log
 
 # Misc
 .contentlayer
+
+# Playwright MCP test artifacts
+.playwright-mcp/

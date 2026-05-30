@@ -49,6 +49,8 @@ import { ThemeToggle } from "../controls/ThemeToggle";
 import { AxisLockIndicator } from "../controls/AxisLockIndicator";
 import { SnapshotControls } from "../controls/SnapshotControls";
 import { alignItems, distributeItems } from "@/lib/utils/alignment";
+import { updateItemStyle } from "@/lib/utils/itemStyle";
+import { getContextMenuActions } from "@/lib/utils/contextMenuActions";
 import { useTheme } from "@/hooks/useTheme";
 import { Layers, AlignLeft, Grid } from "lucide-react"; // Remaining lucide-react imports
 import { useCanvasDataSource } from "@/hooks/useCanvasDataSource";
@@ -307,6 +309,12 @@ export function CanvasBoard() {
 
   // Auto-update containedItemIds for all frames when items move
   useEffect(() => {
+    // Skip the O(frames×items) recompute during an active drag/transform — items
+    // mutate up to 60×/sec then. Containment settles on the gesture-end commit
+    // (which re-runs this effect with no gesture in progress) and still updates
+    // immediately for non-gesture mutations (paste/delete/nudge/undo).
+    if (dragHandlers.dragState || isTransformingRef.current) return;
+
     const frames = items.filter((item) => item.entityType === "frame");
 
     if (frames.length === 0) return;
@@ -351,7 +359,7 @@ export function CanvasBoard() {
         }),
       );
     }
-  }, [items, frameContainment, setItemsWithoutHistory]);
+  }, [items, frameContainment, setItemsWithoutHistory, dragHandlers.dragState]);
 
   // Frame-aware lock handler
   const handleFrameLock = useCallback(() => {
@@ -711,196 +719,13 @@ export function CanvasBoard() {
             x={contextMenuOps.contextMenu.x}
             y={contextMenuOps.contextMenu.y}
             onClose={contextMenuOps.closeContextMenu}
-            actions={[
-              ...contextMenuOps.contextMenuActions.slice(0, 2), // Duplicate, Copy
-              { type: "separator" as const },
-              // Frame export options (only show for single frame selection)
-              ...(multiSelect.selectedIds.length === 1 &&
-              items.find((item) => item.id === multiSelect.selectedIds[0])
-                ?.entityType === "frame"
-                ? [
-                    {
-                      id: "export-png",
-                      label: "Export as PNG",
-                      icon: (
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                      ),
-                      action: () =>
-                        frameExport.exportFrameAsPNG(
-                          multiSelect.selectedIds[0],
-                        ),
-                    },
-                    {
-                      id: "export-jpg",
-                      label: "Export as JPG",
-                      icon: (
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                      ),
-                      action: () =>
-                        frameExport.exportFrameAsJPG(
-                          multiSelect.selectedIds[0],
-                        ),
-                    },
-                    {
-                      id: "export-svg",
-                      label: "Export as SVG",
-                      icon: (
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                          />
-                        </svg>
-                      ),
-                      action: () =>
-                        frameExport.exportFrameAsSVG(
-                          multiSelect.selectedIds[0],
-                        ),
-                    },
-                    {
-                      id: "export-pdf",
-                      label: "Export as PDF",
-                      icon: (
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                          />
-                        </svg>
-                      ),
-                      action: () =>
-                        frameExport.exportFrameAsPDF(
-                          multiSelect.selectedIds[0],
-                        ),
-                    },
-                    { type: "separator" as const },
-                  ]
-                : []),
-              {
-                id: "bring-to-front",
-                label: "Bring to Front",
-                icon: (
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 15l7-7 7 7"
-                    />
-                  </svg>
-                ),
-                action: layerOps.bringToFront,
-                shortcut: "Ctrl+]",
-              },
-              {
-                id: "bring-forward",
-                label: "Bring Forward",
-                icon: (
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 11l5-5 5 5M7 17l5-5 5 5"
-                    />
-                  </svg>
-                ),
-                action: layerOps.bringForward,
-                shortcut: "Ctrl+[",
-              },
-              {
-                id: "send-backward",
-                label: "Send Backward",
-                icon: (
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 13l-5 5-5-5M17 7l-5 5-5-5"
-                    />
-                  </svg>
-                ),
-                action: layerOps.sendBackward,
-                shortcut: "Ctrl+Shift+[",
-              },
-              {
-                id: "send-to-back",
-                label: "Send to Back",
-                icon: (
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                ),
-                action: layerOps.sendToBack,
-                shortcut: "Ctrl+Shift+]",
-              },
-              { type: "separator" as const },
-              ...contextMenuOps.contextMenuActions.slice(2), // Group, Lock, Delete
-            ]}
+            actions={getContextMenuActions({
+              baseActions: contextMenuOps.contextMenuActions,
+              selectedIds: multiSelect.selectedIds,
+              items,
+              frameExport,
+              layerOps,
+            })}
             selectedCount={multiSelect.selectedIds.length}
           />
         )}
@@ -928,135 +753,13 @@ export function CanvasBoard() {
             multiSelect.selectedIds.includes(it.id),
           )}
           onStyleChange={(property, value) => {
-            // Determine if this is a text property or a style property
-            const textProperties = [
-              "textColor",
-              "fontSize",
-              "fontFamily",
-              "fontWeight",
-              "fontStyle",
-              "textAlign",
-              "underline",
-              "strikethrough",
-              "lineHeight",
-              "letterSpacing",
-            ];
-            const isTextProperty = textProperties.includes(property);
-
-            // Update for all selected stylable items
+            // Update for all selected stylable items (mapping lives in updateItemStyle)
             setItems((prev) =>
-              prev.map((item) => {
-                if (!multiSelect.selectedIds.includes(item.id)) return item;
-
-                if (item.entityType === "shape") {
-                  if (isTextProperty) {
-                    // Text properties go directly in data
-                    return {
-                      ...item,
-                      data: {
-                        ...item.data,
-                        [property]: value,
-                      },
-                    };
-                  } else {
-                    // Style properties go in data.style
-                    return {
-                      ...item,
-                      data: {
-                        ...item.data,
-                        style: {
-                          ...item.data.style,
-                          [property]: value,
-                        },
-                      },
-                    };
-                  }
-                } else if (item.entityType === "text") {
-                  // Map properties for Text renderer
-                  const newItem = { ...item, data: { ...item.data } };
-                  if (property === "textColor") newItem.data.color = value;
-                  else if (property === "fontSize")
-                    newItem.data.fontSize = value;
-                  else if (property === "fontFamily")
-                    newItem.data.fontFamily = value;
-                  else if (property === "fontWeight")
-                    newItem.data.bold = value === "bold";
-                  else if (property === "fontStyle")
-                    newItem.data.italic = value === "italic";
-                  else if (property === "textAlign") newItem.data.align = value;
-                  else if (property === "underline")
-                    newItem.data.underline = value;
-                  else if (property === "strikethrough")
-                    newItem.data.strikethrough = value;
-                  else if (property === "lineHeight")
-                    newItem.data.lineHeight = value;
-                  else if (property === "letterSpacing")
-                    newItem.data.letterSpacing = value;
-                  return newItem;
-                } else if (item.entityType === "sticky-note") {
-                  // Map properties for Note renderer
-                  const newItem = { ...item, data: { ...item.data } };
-                  if (property === "fillColor") newItem.data.color = value;
-                  return newItem;
-                } else if (item.entityType === "frame") {
-                  // Map properties for Frame renderer
-                  const newItem = { ...item, data: { ...item.data } };
-                  if (property === "fillColor") newItem.data.color = value;
-                  else if (property === "cornerRadius")
-                    newItem.data.cornerRadius = value;
-                  return newItem;
-                } else if (item.entityType === "pen") {
-                  // Map properties for Pen (path) renderer - stroke and label properties
-                  const newItem = { ...item, data: { ...item.data } };
-                  if (property === "strokeColor")
-                    newItem.data.strokeColor = value;
-                  else if (property === "strokeWidth")
-                    newItem.data.strokeWidth = value;
-                  else if (property === "strokeStyle")
-                    newItem.data.strokeStyle = value;
-                  else if (property === "label") newItem.data.label = value;
-                  else if (property === "labelColor")
-                    newItem.data.labelColor = value;
-                  else if (property === "labelSize")
-                    newItem.data.labelSize = value;
-                  else if (property === "labelBackgroundColor")
-                    newItem.data.labelBackgroundColor = value;
-                  else if (property === "labelFontFamily")
-                    newItem.data.labelFontFamily = value;
-                  else if (property === "labelBold")
-                    newItem.data.labelBold = value;
-                  else if (property === "labelItalic")
-                    newItem.data.labelItalic = value;
-                  return newItem;
-                } else if (
-                  item.entityType === "line" ||
-                  item.entityType === "arrow"
-                ) {
-                  // Map properties for Line/Arrow renderer - stroke and label properties
-                  const newItem = { ...item, data: { ...item.data } };
-                  if (property === "strokeColor")
-                    newItem.data.strokeColor = value;
-                  else if (property === "strokeWidth")
-                    newItem.data.strokeWidth = value;
-                  else if (property === "strokeStyle")
-                    newItem.data.strokeStyle = value;
-                  else if (property === "label") newItem.data.label = value;
-                  else if (property === "labelColor")
-                    newItem.data.labelColor = value;
-                  else if (property === "labelSize")
-                    newItem.data.labelSize = value;
-                  else if (property === "labelBackgroundColor")
-                    newItem.data.labelBackgroundColor = value;
-                  else if (property === "labelFontFamily")
-                    newItem.data.labelFontFamily = value;
-                  else if (property === "labelBold")
-                    newItem.data.labelBold = value;
-                  else if (property === "labelItalic")
-                    newItem.data.labelItalic = value;
-                  return newItem;
-                }
-                return item;
-              }),
+              prev.map((item) =>
+                multiSelect.selectedIds.includes(item.id)
+                  ? updateItemStyle(item, property, value)
+                  : item,
+              ),
             );
             setDebugInfo(
               `Updated ${property} for ${multiSelect.selectedIds.length} items`,

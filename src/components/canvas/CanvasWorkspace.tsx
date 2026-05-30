@@ -11,6 +11,7 @@ import { CanvasItemRenderer } from "./CanvasItemRenderer";
 import { TransformLayer } from "./controls/TransformLayer";
 import { useTransform } from "@/hooks/useTransform";
 import { useCanvasDrop } from "@/hooks/useCanvasDrop";
+import { DrawingModeReturn } from "@/hooks/useDrawingMode";
 import { CanvasOverlays } from "./CanvasOverlays";
 import { MultiSelectBoundingBox } from "./controls/MultiSelectBoundingBox";
 import { SnapGuide } from "./controls/SnapGuides";
@@ -60,19 +61,7 @@ interface CanvasWorkspaceProps {
   onToggleColorScheme?: () => void;
   comparisonResult?: SnapshotComparison | null;
   // Drawing mode
-  drawingMode?: {
-    handleCanvasClick: (e: React.MouseEvent<HTMLDivElement>) => boolean;
-    handleDrawStart: (e: React.MouseEvent<HTMLDivElement>) => boolean;
-    handleDrawMove: (e: React.MouseEvent<HTMLDivElement>) => void;
-    handleDrawEnd: () => void;
-    getCursorStyle: () => string;
-    screenToCanvas: (
-      screenX: number,
-      screenY: number,
-    ) => { x: number; y: number };
-    drawingState: any;
-    activeTool?: string;
-  };
+  drawingMode?: DrawingModeReturn;
   onItemUpdate?: (itemId: string, newData: any) => void;
   onItemAdd?: (item: CanvasItem) => void;
   onToolReset?: () => void; // Reset to select tool
