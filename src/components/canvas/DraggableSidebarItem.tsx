@@ -1,5 +1,3 @@
-'use client';
-
 import { useDraggable } from '@dnd-kit/core';
 import { Package, Layout, Zap, MoreVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';

@@ -3,6 +3,8 @@
 > Consolidated from four review reports (Architecture, Monorepo Fit, Backend & Data Model, Tooling & CI), reconciled against the live codebase at `D:\Syncthing\development\qanvasv2`.
 >
 > _Generated 2026-05-30 by a multi-agent review workflow (`qanvas-monorepo-migration-review`)._
+>
+> **STATUS (2026-05-30):** Phase 0 ✅ done. Phase 1 ✅ done **in-place** — the app was transplanted Next.js 16 → **Vite 6** as a standalone SPA here (not yet moved into the monorepo): `index.html` + `src/index.tsx` + `src/App.tsx`, `vite.config.ts`, Vite `tsconfig`, `.prettierrc`, PostCSS ESM, `'use client'` stripped, `next/font` → Google Fonts link. Decision taken: **commit to Vite**. **Remaining:** move into `apps/qanvas` (workspace wiring, `@itq/shared`), then Phases 2–4 (SSO/auth, Firebase data layer, snapshots/hosting). The framework swap is intentionally separated from the monorepo move to keep each step reviewable.
 
 ---
 

@@ -1,5 +1,3 @@
-'use client';
-
 import { BoundingBox } from '@/hooks/useMultiSelect';
 
 interface SelectionBoxProps {

@@ -1,5 +1,3 @@
-'use client';
-
 import { CanvasItem } from '@/lib/types';
 
 interface GroupOutlineProps {

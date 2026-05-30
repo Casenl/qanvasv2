@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { X, Plus, Minus, Move, TrendingUp, TrendingDown, Minus as MinusCircle } from 'lucide-react';
 import { SnapshotComparison } from '@/lib/types/snapshot';

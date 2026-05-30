@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
 import { Paintbrush, Plus } from 'lucide-react';
 

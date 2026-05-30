@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState, useRef, useEffect } from 'react';
 import { StickyNoteData, STICKY_NOTE_COLORS } from '@/lib/types/shapeTypes';
 

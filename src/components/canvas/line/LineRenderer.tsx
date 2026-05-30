@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { LineData } from '@/lib/types/shapeTypes';
 import { useLabelDragging, calculateLabelPosition } from '@/hooks/useLabelDragging';

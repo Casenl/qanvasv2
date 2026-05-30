@@ -6,28 +6,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Qanvas v2 is a single-page **business/solution architecture canvas** — an infinite, pan/zoom whiteboard where users drag ITQ products, vendors, and solutions onto a board alongside freeform drawing tools (shapes, text, sticky notes, frames, lines/arrows, pen). It is an ITQ portfolio tool.
 
-**Current state:** standalone **Next.js 16** app (App Router, Turbopack), **client-only**. All data is hardcoded mock data in `src/lib/data/mockData.ts` (`PROPOSITIONS`, `VENDORS`, `PRODUCTS`, `SOLUTIONS`); state lives in memory only — no backend, no persistence, no auth, no deploy config.
+**Current state:** standalone **Vite 6 SPA** (React 19, TypeScript strict, Tailwind v4), **client-only**. _(Migrated off Next.js 16 in-place to match the itq-app-portal monorepo — see `docs/migration/MONOREPO_MIGRATION_PLAN.md`.)_ All data is hardcoded mock data in `src/lib/data/mockData.ts` (`PROPOSITIONS`, `VENDORS`, `PRODUCTS`, `SOLUTIONS`); state lives in memory only — no backend, no persistence, no auth, no deploy config.
 
-**Intended direction:** become one of the apps in the `D:\Syncthing\development\itq-app-portal` monorepo — Firebase-backed, using the logo from that monorepo's Asset Hub. See "Conventions adopted from itq-app-portal" below. None of that exists yet; treat Firebase/monorepo notes as forward-looking.
+**Intended direction:** become one of the apps in the `D:\Syncthing\development\itq-app-portal` monorepo (`apps/qanvas`) — Firebase-backed, using the logo from that monorepo's Asset Hub. The Vite transplant is done; the monorepo move + Firebase backend are the remaining work. See "Conventions adopted from itq-app-portal" below; treat Firebase/`@itq/shared` notes as forward-looking.
 
 ## Commands
 
 ```bash
-npm run dev      # Next dev server (Turbopack), http://localhost:3000
-npm run build    # Production build — runs TypeScript; MUST pass before shipping
-npm run start    # Serve the production build
-npx tsc --noEmit # Typecheck only (faster than build); tsconfig is strict
+npm run dev       # Vite dev server, http://localhost:3006 (falls forward if taken)
+npm run build     # Production build (vite build → dist/). Does NOT typecheck.
+npm run preview   # Serve the production build
+npm run typecheck # tsc --noEmit — run this separately; build won't catch type errors
 ```
 
 - **No test framework is configured** — do not invent `npm test`. Verify changes by running the app and (for UI) browser-testing (see testing rule below).
-- `npm run lint` is **broken under Next 16** (`package.json` still has `next lint`, removed in Next 16). Use `npx tsc --noEmit` and `npm run build` instead, or run ESLint directly.
-- **Turbopack cache + `@eaDir`:** this folder has historically lived under Synology/Syncthing, which injects `@eaDir` metadata dirs. If the dev server refuses to start with `Unexpected file in persistence directory: ...\.next\...\@eaDir`, run `rm -rf .next` and restart. `@eaDir/` and `*@SynoEAStream` are gitignored.
+- **`vite build` does not typecheck** (esbuild strips types). Always run `npm run typecheck` separately — that's the real gate.
+- **No lint configured** here yet. ESLint/Prettier come from the monorepo at move-time; a `.prettierrc` matching the monorepo (singleQuote, semi, printWidth 120, tabWidth 2) already exists.
+- **Vite cache + `@eaDir`:** this folder has historically lived under Synology/Syncthing, which injects `@eaDir` metadata dirs. The Vite cache is at `/tmp/.vite-qanvas` on Windows/WSL (set in `vite.config.ts`) to dodge file-locking. If a build cache ever gets poisoned by `@eaDir`, clear the cache dir and restart. `@eaDir/`, `*@SynoEAStream`, and `.playwright-mcp/` are gitignored.
 
 ## Architecture
 
 ### The single orchestrator: `CanvasBoard`
 
-`src/app/page.tsx` renders one component: `src/components/canvas/board/CanvasBoard.tsx` (~900 lines). It is the god-component that owns all state and composes ~30 hooks (drag, history, multi-select, snapping, clipboard, layers, drawing, frames, snapshots, metrics, transform). Most features are added by wiring a new hook into `CanvasBoard` and passing its output down to `CanvasSidebar`, `CanvasWorkspace`, `FloatingToolbar`, `AlignmentToolbar`, `PropertiesPanel`, or `ContextMenu`. Read this file first to understand any feature.
+Entry chain: `index.html` → `src/index.tsx` (`createRoot`) → `src/App.tsx` → `src/components/canvas/board/CanvasBoard.tsx` (~890 lines). `CanvasBoard` is the god-component that owns all state and composes ~30 hooks (drag, history, multi-select, snapping, clipboard, layers, drawing, frames, snapshots, metrics, transform). Most features are added by wiring a new hook into `CanvasBoard` and passing its output down to `CanvasSidebar`, `CanvasWorkspace`, `FloatingToolbar`, `AlignmentToolbar`, `PropertiesPanel`, or `ContextMenu`. Read this file first to understand any feature.
 
 ### Universal item model + entityType dispatch
 
@@ -64,7 +65,7 @@ The transform flow models this: `onTransformStart` flips `isTransformingRef`, up
 
 ### Theme system is JS-driven (not just CSS)
 
-`src/hooks/useTheme.ts` injects **all** `--color-*` CSS custom properties onto `document.documentElement` at runtime from the theme objects in `src/lib/theme.ts` (`themes.dark` / `themes.light`), persists choice to `localStorage['qanvas-theme']`, defaults to **dark**, and sets `data-theme`. `globals.css` only declares a couple of `@theme` brand vars; the rest exist only after `useTheme` runs. This is why `CanvasBoard` shows a spinner until `mounted` — it avoids a hydration mismatch from client-applied theme vars.
+`src/hooks/useTheme.ts` injects **all** `--color-*` CSS custom properties onto `document.documentElement` at runtime from the theme objects in `src/lib/theme.ts` (`themes.dark` / `themes.light`), persists choice to `localStorage['qanvas-theme']`, defaults to **dark**, and sets `data-theme`. `src/index.css` only declares a couple of `@theme` brand vars; the rest exist only after `useTheme` runs. `CanvasBoard` still gates its first render on a `mounted` flag (a one-frame spinner) which avoids a flash of unthemed content before the vars are applied.
 
 **REQUIRED styling rule** (`docs/architecture/THEME_STYLING_BEST_PRACTICES.md`): components must style via `var(--color-surface)`, `var(--color-border)`, `var(--color-text)`, `var(--color-text-muted)`, `var(--color-brand-primary)`, etc. **Never** hardcode hex/rgb, never use Tailwind `dark:` classes, never invent custom HSL-opacity variants. Match existing components (`CanvasSidebar`, `PropertiesPanel`, `AlignmentToolbar`).
 
@@ -75,12 +76,13 @@ The transform flow models this: `onTransformStart` flips `isTransformingRef`, up
 - **Frames** auto-track contained items via `useFrameContainment` (recomputed in a `setItemsWithoutHistory` effect); locking a frame cascades to its contents.
 - **Exports** (`useFrameExport`) render a frame to PNG/JPG/SVG/PDF via `html-to-image` + `jspdf`.
 - **Architecture layers** (presentation/application/data/…) and their colors are defined in `src/lib/constants.ts`.
-- Path alias: `@/*` → `src/*`. Components use **named exports** and `'use client'`.
+- Path alias: `@/*` → `src/*` (in both `tsconfig.json` and `vite.config.ts` — keep them in sync). Components use **named exports**. (No `'use client'` — those were stripped during the Vite migration.)
+- Fonts: Titillium Web via a Google Fonts `<link>` in `index.html`; `body` sets `font-family` in `src/index.css`.
 - Extensive design/feature docs live in `docs/` (start at `docs/README.md`); `THEME_STYLING_BEST_PRACTICES.md` is marked MUST-FOLLOW.
 
 ## Conventions adopted from the itq-app-portal monorepo
 
-This app is slated to join `itq-app-portal`. Apply these now where they cost nothing; treat Firebase/Vite items as forward-looking until the integration happens.
+This app is slated to join `itq-app-portal` as `apps/qanvas`. Apply these now where they cost nothing; treat Firebase/`@itq/shared` items as forward-looking until the integration happens.
 
 **Applies now:**
 
@@ -92,15 +94,14 @@ This app is slated to join `itq-app-portal`. Apply these now where they cost not
 - **Code is auto-formatted** to 2-space indent / double quotes (a Prettier-style hook reformats on save). Match it; expect edits near your target lines to be reflowed.
 - **Cost discipline / subagents:** delegate token-heavy QA (Playwright flows, CI watch loops, log scrapes) to cheaper models via the Agent tool (`model: "sonnet"`/`"haiku"`). Any verify/QA/exploration subagent prompt must be scoped read-only and told to STOP and report on blockers rather than self-granting access, editing source, or deploying.
 
+**Done:** build is already aligned — this app runs on **Vite 6** (`vite.config.ts`, `index.html`, `src/index.tsx`) like the monorepo apps. Layout is still `src/`-based here; flatten to the app root (`@ → ./`) at move-time to match the others.
+
 **Forward-looking (when wired into the monorepo / Firebase):**
 
-- The monorepo apps are **React 19 + Vite 6 + TypeScript + Firebase**, not Next.js. Integrating likely means aligning the build (Vite) and pulling shared code from `@itq/shared`.
-- Import Firebase from a centralized `./firebase` / `@itq/shared`, never directly from `firebase/*`.
+- Add the `@itq/shared` alias (`vite.config.ts` + `tsconfig.json`) pointing at `../../packages/shared/src`; pull shared firebase/types/`ErrorBoundary` from there.
+- Import Firebase from a centralized `@/lib/firebase` re-export of `@itq/shared`, never directly from `firebase/*`. Wrap `<App/>` in `ErrorBoundary`.
 - Firestore: write `createdAt`/`updatedAt` as `serverTimestamp()`; read timestamps via `timestampToNumber()`; use enums for role/type unions.
+- The catalog data seam is already in place — `src/hooks/useCanvasDataSource.ts` is where mock data gets swapped for a Firestore `useCatalog()` fetch.
 - Cross-app auth uses server-side SSO token exchange — call `handleSSOToken()` in the auth hook before `onAuthStateChanged`.
 - Per-app `VITE_FIREBASE_*` env vars live in the app's own `.env.local`.
 - The **logo** comes from Asset Hub (`apps/assethub`), served as public `storage.googleapis.com/...` render URLs (REST API at `functions/src/api/assethubApi.ts`, docs at `/developers`) — reference it, don't vendor a local copy.
-
-```
-
-```

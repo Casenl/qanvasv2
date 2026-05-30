@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { Link2, Edit3, RotateCcw, AlertCircle } from 'lucide-react';
 import { CanvasConfiguration, METRIC_DEFINITIONS } from '@/lib/types/canvasConfig';

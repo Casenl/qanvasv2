@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState } from "react";
 import { ShapeData, DEFAULT_SHAPE_STYLE } from "@/lib/types/shapeTypes";
 

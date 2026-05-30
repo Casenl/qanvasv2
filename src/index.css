@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
   --color-brand-primary: hsl(210 100% 50%);
@@ -12,6 +12,13 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+/* Spinner keyframes (used by ImageRenderer loading state) */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -32,6 +39,7 @@
 }
 
 body {
+  font-family: 'Titillium Web', sans-serif;
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
   overflow: hidden;

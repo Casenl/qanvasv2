@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Visual separator between tool groups
  * Simple, single-purpose component

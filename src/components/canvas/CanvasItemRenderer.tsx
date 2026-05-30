@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { CanvasItem } from '@/lib/types';
 import { ShapeRenderer } from './shapes/ShapeRenderer';

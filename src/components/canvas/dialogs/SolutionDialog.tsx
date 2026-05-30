@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState } from 'react';
 import { X, Package, Users, Key } from 'lucide-react';
 import { Product } from '@/lib/types';

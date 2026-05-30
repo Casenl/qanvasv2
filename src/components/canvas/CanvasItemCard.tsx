@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { Package, Layout, Zap, Info, Settings, Lock, Users, TrendingUp } from 'lucide-react';

@@ -1,5 +1,3 @@
-'use client';
-
 import { Search, Settings, MoreVertical, Package, Layout, Tag, Info, ExternalLink, Plus } from 'lucide-react';
 import { CanvasItem, Proposition, Vendor, Product } from '@/lib/types';
 import { CanvasConfiguration } from '@/lib/types/canvasConfig';

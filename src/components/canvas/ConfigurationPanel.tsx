@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
 import { CanvasConfiguration, METRIC_DEFINITIONS, MetricMetadata } from '@/lib/types/canvasConfig';
