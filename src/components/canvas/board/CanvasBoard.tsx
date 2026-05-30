@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-  useMemo,
-} from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -18,80 +12,65 @@ import {
   pointerWithin,
   CollisionDetection,
   rectIntersection,
-} from "@dnd-kit/core";
-import { createPortal } from "react-dom";
-import { Package, Layout } from "lucide-react"; // Combined imports for lucide-react
+} from '@dnd-kit/core';
+import { createPortal } from 'react-dom';
+import { Package, Layout } from 'lucide-react'; // Combined imports for lucide-react
 
-import {
-  PropositionType,
-  Proposition,
-  Vendor,
-  Product,
-  Solution,
-  CanvasItem,
-} from "@/lib/types";
-import { CanvasSidebar } from "../CanvasSidebar";
-import { CanvasWorkspace } from "../CanvasWorkspace";
-import { CanvasCardVisual } from "../CanvasItemCard";
-import { PropertiesPanel } from "../PropertiesPanel";
-import { useMultiSelect } from "@/hooks/useMultiSelect";
-import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { useSnapGuides } from "@/hooks/useSnapGuides";
-import { useModifierKeys } from "@/hooks/useModifierKeys";
-import { useHistory } from "@/hooks/useHistory";
-import { useDragHandlers } from "@/hooks/useDragHandlers";
-import { FloatingToolbar } from "../toolbar/FloatingToolbar";
-import { ContextMenu } from "../controls/ContextMenu";
-import { AlignmentToolbar } from "../controls/AlignmentToolbar";
-import { ThemeToggle } from "../controls/ThemeToggle";
-import { AxisLockIndicator } from "../controls/AxisLockIndicator";
-import { SnapshotControls } from "../controls/SnapshotControls";
-import { alignItems, distributeItems } from "@/lib/utils/alignment";
-import { updateItemStyle } from "@/lib/utils/itemStyle";
-import { getContextMenuActions } from "@/lib/utils/contextMenuActions";
-import { useTheme } from "@/hooks/useTheme";
-import { Layers, AlignLeft, Grid } from "lucide-react"; // Remaining lucide-react imports
-import { useCanvasDataSource } from "@/hooks/useCanvasDataSource";
-import { useItemNudging } from "@/hooks/useItemNudging";
-import { useItemLocking } from "@/hooks/useItemLocking";
-import { useAlignment } from "@/hooks/useAlignment";
-import { useClipboard } from "@/hooks/useClipboard";
-import { useContextMenu } from "@/hooks/useContextMenu";
-import { useCanvasTransform } from "@/hooks/useCanvasTransform";
-import { useSnapshotManager } from "@/hooks/useSnapshotManager";
-import { useSolutionManager } from "@/hooks/useSolutionManager";
-import { useMetricManager } from "@/hooks/useMetricManager";
-import { useToolbar } from "@/hooks/useToolbar";
-import { useDrawingMode } from "@/hooks/useDrawingMode";
-import { useFrameContainment } from "@/hooks/useFrameContainment";
-import { useLayerOperations } from "@/hooks/useLayerOperations";
-import { useFrameExport } from "@/hooks/useFrameExport";
-import { ZoomControls } from "../controls/ZoomControls";
-import { SolutionDialog } from "../dialogs/SolutionDialog";
-import {
-  CanvasConfiguration,
-  DEFAULT_CANVAS_CONFIG,
-} from "@/lib/types/canvasConfig";
+import { PropositionType, Proposition, Vendor, Product, Solution, CanvasItem } from '@/lib/types';
+import { CanvasSidebar } from '../CanvasSidebar';
+import { CanvasWorkspace } from '../CanvasWorkspace';
+import { CanvasCardVisual } from '../CanvasItemCard';
+import { PropertiesPanel } from '../PropertiesPanel';
+import { useMultiSelect } from '@/hooks/useMultiSelect';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useSnapGuides } from '@/hooks/useSnapGuides';
+import { useModifierKeys } from '@/hooks/useModifierKeys';
+import { useHistory } from '@/hooks/useHistory';
+import { useDragHandlers } from '@/hooks/useDragHandlers';
+import { FloatingToolbar } from '../toolbar/FloatingToolbar';
+import { ContextMenu } from '../controls/ContextMenu';
+import { AlignmentToolbar } from '../controls/AlignmentToolbar';
+import { ThemeToggle } from '../controls/ThemeToggle';
+import { AxisLockIndicator } from '../controls/AxisLockIndicator';
+import { SnapshotControls } from '../controls/SnapshotControls';
+import { alignItems, distributeItems } from '@/lib/utils/alignment';
+import { updateItemStyle } from '@/lib/utils/itemStyle';
+import { getContextMenuActions } from '@/lib/utils/contextMenuActions';
+import { useTheme } from '@/hooks/useTheme';
+import { Layers, AlignLeft, Grid } from 'lucide-react'; // Remaining lucide-react imports
+import { useCanvasDataSource } from '@/hooks/useCanvasDataSource';
+import { useItemNudging } from '@/hooks/useItemNudging';
+import { useItemLocking } from '@/hooks/useItemLocking';
+import { useAlignment } from '@/hooks/useAlignment';
+import { useClipboard } from '@/hooks/useClipboard';
+import { useContextMenu } from '@/hooks/useContextMenu';
+import { useCanvasTransform } from '@/hooks/useCanvasTransform';
+import { useSnapshotManager } from '@/hooks/useSnapshotManager';
+import { useSolutionManager } from '@/hooks/useSolutionManager';
+import { useMetricManager } from '@/hooks/useMetricManager';
+import { useToolbar } from '@/hooks/useToolbar';
+import { useDrawingMode } from '@/hooks/useDrawingMode';
+import { useFrameContainment } from '@/hooks/useFrameContainment';
+import { useLayerOperations } from '@/hooks/useLayerOperations';
+import { useFrameExport } from '@/hooks/useFrameExport';
+import { ZoomControls } from '../controls/ZoomControls';
+import { SolutionDialog } from '../dialogs/SolutionDialog';
+import { CanvasConfiguration, DEFAULT_CANVAS_CONFIG } from '@/lib/types/canvasConfig';
 import {
   initializeProductConfig,
   updateMetricManually,
   resetMetricToInherited,
   syncInheritedMetrics,
-} from "@/lib/types/productConfig";
-import {
-  CanvasSnapshot,
-  createSnapshot,
-  compareSnapshots,
-  SnapshotComparison,
-} from "@/lib/types/snapshot";
-import { ComparisonView } from "../ComparisonView";
+} from '@/lib/types/productConfig';
+import { CanvasSnapshot, createSnapshot, compareSnapshots, SnapshotComparison } from '@/lib/types/snapshot';
+import { ComparisonView } from '../ComparisonView';
 
 // Custom collision strategy
 const customCollisionStrategy: CollisionDetection = (args) => {
   const pointerCollisions = pointerWithin(args);
   if (pointerCollisions.length > 0) return pointerCollisions;
   const rectCollisions = rectIntersection(args);
-  return rectCollisions.filter((c) => c.id === "canvas-droppable");
+  return rectCollisions.filter((c) => c.id === 'canvas-droppable');
 };
 
 export function CanvasBoard() {
@@ -110,12 +89,10 @@ export function CanvasBoard() {
   const setItems = history.setState;
   const setItemsWithoutHistory = history.setStateWithoutHistory;
   const commitItemsToHistory = history.commitToHistory;
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedProposition, setSelectedProposition] = useState<
-    PropositionType | "all"
-  >("all");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedProposition, setSelectedProposition] = useState<PropositionType | 'all'>('all');
   const [mounted, setMounted] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<string>("Ready");
+  const [debugInfo, setDebugInfo] = useState<string>('Ready');
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -123,20 +100,16 @@ export function CanvasBoard() {
   const isTransformingRef = useRef(false);
 
   // Theme hook
-  const { theme, toggleTheme, isDark } = useTheme();
+  const { theme, toggleTheme, isDark, iconColor, isIconColorOverridden, setIconColor, resetIconColor } = useTheme();
 
   // Color scheme toggle
   const [colorSchemeEnabled, setColorSchemeEnabled] = useState(true);
 
   // Canvas configuration state
-  const [canvasConfig, setCanvasConfig] = useState<CanvasConfiguration>(
-    DEFAULT_CANVAS_CONFIG,
-  );
+  const [canvasConfig, setCanvasConfig] = useState<CanvasConfiguration>(DEFAULT_CANVAS_CONFIG);
 
   // Track previous config to avoid unnecessary syncs
-  const prevCanvasConfigRef = useRef<CanvasConfiguration>(
-    DEFAULT_CANVAS_CONFIG,
-  );
+  const prevCanvasConfigRef = useRef<CanvasConfiguration>(DEFAULT_CANVAS_CONFIG);
 
   // Multi-select hook
   const multiSelect = useMultiSelect();
@@ -156,8 +129,7 @@ export function CanvasBoard() {
 
   // Only exclude items that are being dragged together (multi-select drag)
   const itemsBeingDragged = tempDragState?.id
-    ? multiSelect.selectedIds.includes(tempDragState.id) &&
-      multiSelect.selectedIds.length > 1
+    ? multiSelect.selectedIds.includes(tempDragState.id) && multiSelect.selectedIds.length > 1
       ? multiSelect.selectedIds
       : [tempDragState.id]
     : [];
@@ -178,7 +150,7 @@ export function CanvasBoard() {
       : null,
     items,
     true,
-    itemsBeingDragged,
+    itemsBeingDragged
   );
 
   // Canvas transform hook (needed for drag handlers)
@@ -313,7 +285,7 @@ export function CanvasBoard() {
     // immediately for non-gesture mutations (paste/delete/nudge/undo).
     if (dragHandlers.dragState || isTransformingRef.current) return;
 
-    const frames = items.filter((item) => item.entityType === "frame");
+    const frames = items.filter((item) => item.entityType === 'frame');
 
     if (frames.length === 0) return;
 
@@ -327,9 +299,7 @@ export function CanvasBoard() {
       // Check if the contained items have changed
       const hasChanged =
         currentContainedIds.length !== actualContainedIds.length ||
-        !currentContainedIds.every((id: string) =>
-          actualContainedIds.includes(id),
-        );
+        !currentContainedIds.every((id: string) => actualContainedIds.includes(id));
 
       if (hasChanged) {
         needsUpdate = true;
@@ -354,23 +324,17 @@ export function CanvasBoard() {
             };
           }
           return item;
-        }),
+        })
       );
     }
   }, [items, frameContainment, setItemsWithoutHistory, dragHandlers.dragState]);
 
   // Frame-aware lock handler
   const handleFrameLock = useCallback(() => {
-    const selectedItems = items.filter((item) =>
-      multiSelect.selectedIds.includes(item.id),
-    );
-    const hasFrame = selectedItems.some((item) => item.entityType === "frame");
+    const selectedItems = items.filter((item) => multiSelect.selectedIds.includes(item.id));
+    const hasFrame = selectedItems.some((item) => item.entityType === 'frame');
 
-    if (
-      hasFrame &&
-      selectedItems.length === 1 &&
-      selectedItems[0].entityType === "frame"
-    ) {
+    if (hasFrame && selectedItems.length === 1 && selectedItems[0].entityType === 'frame') {
       // Single frame selected - lock/unlock frame and its contents
       const frame = selectedItems[0];
       const isCurrentlyLocked = frame.locked;
@@ -389,11 +353,11 @@ export function CanvasBoard() {
           }
 
           return item;
-        }),
+        })
       );
 
       setDebugInfo(
-        `Frame and ${frame.data?.containedItemIds?.length || 0} items ${isCurrentlyLocked ? "unlocked" : "locked"}`,
+        `Frame and ${frame.data?.containedItemIds?.length || 0} items ${isCurrentlyLocked ? 'unlocked' : 'locked'}`
       );
     } else {
       // Normal lock behavior for non-frame items
@@ -421,8 +385,7 @@ export function CanvasBoard() {
   useEffect(() => {
     // Check if config actually changed
     const configChanged =
-      JSON.stringify(prevCanvasConfigRef.current.coreMetrics) !==
-      JSON.stringify(canvasConfig.coreMetrics);
+      JSON.stringify(prevCanvasConfigRef.current.coreMetrics) !== JSON.stringify(canvasConfig.coreMetrics);
 
     if (!configChanged) return;
 
@@ -432,17 +395,13 @@ export function CanvasBoard() {
     // Sync metrics
     setItems((prev) =>
       prev.map((item) => {
-        if (!item.productConfig || item.entityType !== "product") return item;
+        if (!item.productConfig || item.entityType !== 'product') return item;
 
         return {
           ...item,
-          productConfig: syncInheritedMetrics(
-            item.productConfig,
-            canvasConfig,
-            item.entityId,
-          ),
+          productConfig: syncInheritedMetrics(item.productConfig, canvasConfig, item.entityId),
         };
-      }),
+      })
     );
   }, [canvasConfig]);
 
@@ -475,17 +434,17 @@ export function CanvasBoard() {
       onUndo: () => {
         if (history.canUndo) {
           history.undo();
-          setDebugInfo("Undo");
+          setDebugInfo('Undo');
         }
       },
       onRedo: () => {
         if (history.canRedo) {
           history.redo();
-          setDebugInfo("Redo");
+          setDebugInfo('Redo');
         }
       },
     },
-    mounted,
+    mounted
   );
 
   // Mouse wheel zoom listener
@@ -505,8 +464,8 @@ export function CanvasBoard() {
 
     const container = canvasRef.current;
     if (container) {
-      container.addEventListener("wheel", handleWheel, { passive: false });
-      return () => container.removeEventListener("wheel", handleWheel);
+      container.addEventListener('wheel', handleWheel, { passive: false });
+      return () => container.removeEventListener('wheel', handleWheel);
     }
   }, [canvasTransform, canvasRef]);
 
@@ -514,17 +473,14 @@ export function CanvasBoard() {
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, {
       activationConstraint: { delay: 250, tolerance: 5 },
-    }),
+    })
   );
 
   // Calculate floating toolbar position
   const toolbarPosition = useMemo(() => {
-    if (multiSelect.selectedIds.length === 0 || dragHandlers.dragState)
-      return undefined;
+    if (multiSelect.selectedIds.length === 0 || dragHandlers.dragState) return undefined;
 
-    const selectedItems = items.filter((it) =>
-      multiSelect.selectedIds.includes(it.id),
-    );
+    const selectedItems = items.filter((it) => multiSelect.selectedIds.includes(it.id));
     if (selectedItems.length === 0) return undefined;
 
     // Calculate bounding box in canvas coordinates
@@ -537,7 +493,7 @@ export function CanvasBoard() {
       let width = 300; // Default for product/vendor/solution cards
       let height = 172;
 
-      if (item.data && typeof item.data.width === "number") {
+      if (item.data && typeof item.data.width === 'number') {
         width = item.data.width;
         height = item.data.height || width;
       }
@@ -578,20 +534,14 @@ export function CanvasBoard() {
 
   // Filters
   const filteredProducts = PRODUCTS.filter((p) => {
-    const matchesSearch = p.name
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesProp =
-      selectedProposition === "all" || p.propositionId === selectedProposition;
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesProp = selectedProposition === 'all' || p.propositionId === selectedProposition;
     return matchesSearch && matchesProp;
   });
 
   const selectedItem =
-    multiSelect.selectedIds.length === 1
-      ? items.find((it) => it.id === multiSelect.selectedIds[0])
-      : undefined;
-  const getVendorName = (vendorId: string) =>
-    VENDORS.find((v) => v.id === vendorId)?.name;
+    multiSelect.selectedIds.length === 1 ? items.find((it) => it.id === multiSelect.selectedIds[0]) : undefined;
+  const getVendorName = (vendorId: string) => VENDORS.find((v) => v.id === vendorId)?.name;
 
   return (
     <DndContext
@@ -605,8 +555,8 @@ export function CanvasBoard() {
       <div
         className="flex h-screen w-full overflow-hidden"
         style={{
-          backgroundColor: "var(--color-background)",
-          color: "var(--color-text)",
+          backgroundColor: 'var(--color-background)',
+          color: 'var(--color-text)',
         }}
         onContextMenu={contextMenuOps.handleContextMenu}
       >
@@ -665,6 +615,10 @@ export function CanvasBoard() {
           onResetZoom={canvasTransform.resetZoom}
           isDark={isDark}
           onToggleTheme={toggleTheme}
+          iconColor={iconColor}
+          isIconColorOverridden={isIconColorOverridden}
+          onIconColorChange={setIconColor}
+          onIconColorReset={resetIconColor}
           onPan={canvasTransform.setPan}
           colorSchemeEnabled={colorSchemeEnabled}
           onToggleColorScheme={() => setColorSchemeEnabled(!colorSchemeEnabled)}
@@ -682,17 +636,11 @@ export function CanvasBoard() {
             if (isTransformingRef.current) {
               // During transform: silent update (no history)
               setItemsWithoutHistory((prev) =>
-                prev.map((item) =>
-                  item.id === itemId ? { ...item, ...updates } : item,
-                ),
+                prev.map((item) => (item.id === itemId ? { ...item, ...updates } : item))
               );
             } else {
               // Normal update: add to history
-              setItems((prev) =>
-                prev.map((item) =>
-                  item.id === itemId ? { ...item, ...updates } : item,
-                ),
-              );
+              setItems((prev) => prev.map((item) => (item.id === itemId ? { ...item, ...updates } : item)));
             }
           }}
           onTransformStart={() => {
@@ -737,39 +685,26 @@ export function CanvasBoard() {
           onCreateSolution={solutionManager.createSolution}
           isGrouped={
             multiSelect.selectedIds.length > 0 &&
-            items
-              .filter((it) => multiSelect.selectedIds.includes(it.id))
-              .every((it) => it.groupId)
+            items.filter((it) => multiSelect.selectedIds.includes(it.id)).every((it) => it.groupId)
           }
           isLocked={
             multiSelect.selectedIds.length > 0 &&
-            items
-              .filter((it) => multiSelect.selectedIds.includes(it.id))
-              .every((it) => it.locked)
+            items.filter((it) => multiSelect.selectedIds.includes(it.id)).every((it) => it.locked)
           }
-          selectedItems={items.filter((it) =>
-            multiSelect.selectedIds.includes(it.id),
-          )}
+          selectedItems={items.filter((it) => multiSelect.selectedIds.includes(it.id))}
           onStyleChange={(property, value) => {
             // Update for all selected stylable items (mapping lives in updateItemStyle)
             setItems((prev) =>
               prev.map((item) =>
-                multiSelect.selectedIds.includes(item.id)
-                  ? updateItemStyle(item, property, value)
-                  : item,
-              ),
+                multiSelect.selectedIds.includes(item.id) ? updateItemStyle(item, property, value) : item
+              )
             );
-            setDebugInfo(
-              `Updated ${property} for ${multiSelect.selectedIds.length} items`,
-            );
+            setDebugInfo(`Updated ${property} for ${multiSelect.selectedIds.length} items`);
           }}
           position={toolbarPosition}
         />
 
-        <AxisLockIndicator
-          isActive={keys.shift && !!dragHandlers.dragState}
-          axis={dragHandlers.lockedAxis}
-        />
+        <AxisLockIndicator isActive={keys.shift && !!dragHandlers.dragState} axis={dragHandlers.lockedAxis} />
 
         <PropertiesPanel
           selectedItem={selectedItem}
@@ -788,20 +723,16 @@ export function CanvasBoard() {
         createPortal(
           <DragOverlay dropAnimation={null}>
             {dragHandlers.activeDragData ? (
-              dragHandlers.activeDragData.source === "canvas" &&
+              dragHandlers.activeDragData.source === 'canvas' &&
               multiSelect.selectedIds.length > 1 &&
-              multiSelect.selectedIds.includes(
-                dragHandlers.activeDragData.id,
-              ) ? (
+              multiSelect.selectedIds.includes(dragHandlers.activeDragData.id) ? (
                 // Multi-select drag: show all selected items
-                <div style={{ position: "relative" }}>
+                <div style={{ position: 'relative' }}>
                   {multiSelect.selectedIds.map((selectedId, index) => {
                     const selectedItem = items.find((i) => i.id === selectedId);
                     if (!selectedItem) return null;
 
-                    const draggedItem = items.find(
-                      (i) => i.id === dragHandlers.activeDragData.id,
-                    );
+                    const draggedItem = items.find((i) => i.id === dragHandlers.activeDragData.id);
                     if (!draggedItem) return null;
 
                     // Calculate offset from dragged item
@@ -812,7 +743,7 @@ export function CanvasBoard() {
                       <div
                         key={selectedId}
                         style={{
-                          position: "absolute",
+                          position: 'absolute',
                           left: offsetX,
                           top: offsetY,
                         }}
@@ -823,12 +754,9 @@ export function CanvasBoard() {
                           style={{
                             transform: `scale(${canvasTransform.zoom * 1.05})`,
                             zIndex: 100 + index,
-                            cursor: "grabbing",
-                            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-                            opacity:
-                              selectedId === dragHandlers.activeDragData.id
-                                ? 1
-                                : 0.7,
+                            cursor: 'grabbing',
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                            opacity: selectedId === dragHandlers.activeDragData.id ? 1 : 0.7,
                           }}
                         />
                       </div>
@@ -839,12 +767,11 @@ export function CanvasBoard() {
                 // Single item drag
                 <CanvasCardVisual
                   item={
-                    dragHandlers.activeDragData.source === "canvas"
-                      ? items.find(
-                          (i) => i.id === dragHandlers.activeDragData.id,
-                        ) || (dragHandlers.activeDragData as CanvasItem)
+                    dragHandlers.activeDragData.source === 'canvas'
+                      ? items.find((i) => i.id === dragHandlers.activeDragData.id) ||
+                        (dragHandlers.activeDragData as CanvasItem)
                       : ({
-                          id: "temp-drag",
+                          id: 'temp-drag',
                           x: 0,
                           y: 0,
                           entityId: dragHandlers.activeDragData.entityId,
@@ -857,14 +784,14 @@ export function CanvasBoard() {
                   style={{
                     transform: `scale(${canvasTransform.zoom * 1.05})`,
                     zIndex: 100,
-                    cursor: "grabbing",
-                    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)", // Enhanced shadow for lift effect
+                    cursor: 'grabbing',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', // Enhanced shadow for lift effect
                   }}
                 />
               )
             ) : null}
           </DragOverlay>,
-          document.body,
+          document.body
         )}
 
       {/* Solution Dialog */}

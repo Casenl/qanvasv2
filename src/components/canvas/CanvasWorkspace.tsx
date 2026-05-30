@@ -1,19 +1,19 @@
-import React, { useState } from "react";
-import { useDroppable } from "@dnd-kit/core";
-import { Layout } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { CanvasItem, Vendor, Proposition, Product } from "@/lib/types";
-import { SnapshotComparison } from "@/lib/types/snapshot";
-import { CanvasItemCard } from "./CanvasItemCard";
-import { CanvasItemRenderer } from "./CanvasItemRenderer";
-import { TransformLayer } from "./controls/TransformLayer";
-import { useTransform } from "@/hooks/useTransform";
-import { useCanvasDrop } from "@/hooks/useCanvasDrop";
-import { DrawingModeReturn } from "@/hooks/useDrawingMode";
-import { CanvasOverlays } from "./CanvasOverlays";
-import { MultiSelectBoundingBox } from "./controls/MultiSelectBoundingBox";
-import { SnapGuide } from "./controls/SnapGuides";
-import { DrawingPreview } from "./controls/DrawingPreview";
+import React, { useState } from 'react';
+import { useDroppable } from '@dnd-kit/core';
+import { Layout } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { CanvasItem, Vendor, Proposition, Product } from '@/lib/types';
+import { SnapshotComparison } from '@/lib/types/snapshot';
+import { CanvasItemCard } from './CanvasItemCard';
+import { CanvasItemRenderer } from './CanvasItemRenderer';
+import { TransformLayer } from './controls/TransformLayer';
+import { useTransform } from '@/hooks/useTransform';
+import { useCanvasDrop } from '@/hooks/useCanvasDrop';
+import { DrawingModeReturn } from '@/hooks/useDrawingMode';
+import { CanvasOverlays } from './CanvasOverlays';
+import { MultiSelectBoundingBox } from './controls/MultiSelectBoundingBox';
+import { SnapGuide } from './controls/SnapGuides';
+import { DrawingPreview } from './controls/DrawingPreview';
 
 interface CanvasWorkspaceProps {
   canvasRef: React.RefObject<HTMLDivElement | null>;
@@ -42,7 +42,7 @@ interface CanvasWorkspaceProps {
     clearSelection: () => void;
   };
   onClearItems: () => void;
-  lockedAxis?: "x" | "y" | null;
+  lockedAxis?: 'x' | 'y' | null;
   isShiftPressed?: boolean;
   canvasTransform?: {
     zoom: number;
@@ -54,6 +54,10 @@ interface CanvasWorkspaceProps {
   onResetZoom?: () => void;
   isDark?: boolean;
   onToggleTheme?: () => void;
+  iconColor?: string;
+  isIconColorOverridden?: boolean;
+  onIconColorChange?: (color: string) => void;
+  onIconColorReset?: () => void;
   onPan?: (x: number, y: number) => void;
   colorSchemeEnabled?: boolean;
   onToggleColorScheme?: () => void;
@@ -89,6 +93,10 @@ export function CanvasWorkspace({
   onResetZoom,
   isDark = false,
   onToggleTheme,
+  iconColor,
+  isIconColorOverridden,
+  onIconColorChange,
+  onIconColorReset,
   onPan,
   colorSchemeEnabled = true,
   onToggleColorScheme,
@@ -101,7 +109,7 @@ export function CanvasWorkspace({
   onTransformEnd,
 }: CanvasWorkspaceProps) {
   const { setNodeRef, isOver } = useDroppable({
-    id: "canvas-droppable",
+    id: 'canvas-droppable',
   });
 
   const getVendorName = (vendorId: string) => {
@@ -112,9 +120,7 @@ export function CanvasWorkspace({
     if (!colorSchemeEnabled) return undefined;
     const product = products.find((p) => p.id === entityId);
     if (!product) return undefined;
-    const proposition = propositions.find(
-      (p) => p.id === product.propositionId,
-    );
+    const proposition = propositions.find((p) => p.id === product.propositionId);
     return proposition?.color;
   };
 
@@ -142,18 +148,14 @@ export function CanvasWorkspace({
   // Global event listeners for transform
   React.useEffect(() => {
     if (transform.transformState) {
-      window.addEventListener("mousemove", transform.handleMouseMove);
-      window.addEventListener("mouseup", transform.handleMouseUp);
+      window.addEventListener('mousemove', transform.handleMouseMove);
+      window.addEventListener('mouseup', transform.handleMouseUp);
       return () => {
-        window.removeEventListener("mousemove", transform.handleMouseMove);
-        window.removeEventListener("mouseup", transform.handleMouseUp);
+        window.removeEventListener('mousemove', transform.handleMouseMove);
+        window.removeEventListener('mouseup', transform.handleMouseUp);
       };
     }
-  }, [
-    transform.transformState,
-    transform.handleMouseMove,
-    transform.handleMouseUp,
-  ]);
+  }, [transform.transformState, transform.handleMouseMove, transform.handleMouseUp]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     // If transforming, don't do anything else
@@ -233,10 +235,8 @@ export function CanvasWorkspace({
         // Convert screen coordinates to canvas coordinates
         const screenX = e.clientX - rect.left;
         const screenY = e.clientY - rect.top;
-        const canvasX =
-          (screenX - canvasTransform.pan.x) / canvasTransform.zoom;
-        const canvasY =
-          (screenY - canvasTransform.pan.y) / canvasTransform.zoom;
+        const canvasX = (screenX - canvasTransform.pan.x) / canvasTransform.zoom;
+        const canvasY = (screenY - canvasTransform.pan.y) / canvasTransform.zoom;
         multiSelect.updateBoxSelection(canvasX, canvasY);
       }
     }
@@ -266,11 +266,7 @@ export function CanvasWorkspace({
           let itemWidth = 300; // Default for cards
           let itemHeight = 172;
 
-          if (
-            item.data &&
-            typeof item.data.width === "number" &&
-            typeof item.data.height === "number"
-          ) {
+          if (item.data && typeof item.data.width === 'number' && typeof item.data.height === 'number') {
             itemWidth = item.data.width;
             itemHeight = item.data.height;
           }
@@ -330,25 +326,23 @@ export function CanvasWorkspace({
     <main
       ref={(node) => {
         setNodeRef(node);
-        if (canvasRef && typeof canvasRef === "object") {
+        if (canvasRef && typeof canvasRef === 'object') {
           // @ts-ignore
           canvasRef.current = node;
         }
       }}
       className={cn(
-        "flex-1 relative overflow-hidden z-0 transition-colors duration-200",
-        isOver && "bg-green-500/20",
-        isPanning && "cursor-grabbing",
+        'flex-1 relative overflow-hidden z-0 transition-colors duration-200',
+        isOver && 'bg-green-500/20',
+        isPanning && 'cursor-grabbing'
       )}
       style={{
-        cursor: isPanning
-          ? "grabbing"
-          : drawingMode?.getCursorStyle() || "default",
+        cursor: isPanning ? 'grabbing' : drawingMode?.getCursorStyle() || 'default',
         backgroundImage: isDark
-          ? "radial-gradient(#333333 1px, transparent 1px)"
-          : "radial-gradient(#999999 1px, transparent 1px)",
-        backgroundColor: isDark ? "#1a1a1a" : "#f5f5f5",
-        backgroundSize: "16px 16px",
+          ? 'radial-gradient(#333333 1px, transparent 1px)'
+          : 'radial-gradient(#999999 1px, transparent 1px)',
+        backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
+        backgroundSize: '16px 16px',
       }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
@@ -366,7 +360,7 @@ export function CanvasWorkspace({
       {/* Layer 1: Transformed Canvas Content (zooms and pans) */}
       <div
         ref={(node) => {
-          if (canvasRef && typeof canvasRef === "object") {
+          if (canvasRef && typeof canvasRef === 'object') {
             // @ts-ignore
             canvasRef.current = node;
           }
@@ -376,23 +370,16 @@ export function CanvasWorkspace({
           transform: canvasTransform
             ? `translate(${canvasTransform.pan.x}px, ${canvasTransform.pan.y}px) scale(${canvasTransform.zoom})`
             : undefined,
-          transformOrigin: "0 0",
-          transition: "none",
+          transformOrigin: '0 0',
+          transition: 'none',
         }}
       >
         {/* Multi-Select Bounding Box */}
-        <MultiSelectBoundingBox
-          items={items}
-          selectedIds={selectedIds}
-          zoom={canvasTransform?.zoom || 1}
-        />
+        <MultiSelectBoundingBox items={items} selectedIds={selectedIds} zoom={canvasTransform?.zoom || 1} />
 
         {/* Drawing Preview (pen, line, arrow) */}
         {drawingMode?.drawingState && (
-          <DrawingPreview
-            drawingState={drawingMode.drawingState}
-            activeTool={drawingMode.activeTool || "select"}
-          />
+          <DrawingPreview drawingState={drawingMode.drawingState} activeTool={drawingMode.activeTool || 'select'} />
         )}
 
         {/* Canvas Items */}
@@ -401,32 +388,24 @@ export function CanvasWorkspace({
           // Make item transparent if:
           // 1. It's being dragged, OR
           // 2. It's selected AND another selected item is being dragged (multi-select drag)
-          const shouldBeTransparent = !!(
-            isItemSelected &&
-            activeDragItemId &&
-            selectedIds.includes(activeDragItemId)
-          );
+          const shouldBeTransparent = !!(isItemSelected && activeDragItemId && selectedIds.includes(activeDragItemId));
 
           // Check if this is a new item type (shape, text, sticky-note, etc.) with added 'frame'
           const isNewItemType = [
-            "shape",
-            "text",
-            "sticky-note",
-            "line",
-            "arrow",
-            "pen",
-            "image",
-            "frame",
-            "comment",
+            'shape',
+            'text',
+            'sticky-note',
+            'line',
+            'arrow',
+            'pen',
+            'image',
+            'frame',
+            'comment',
           ].includes(item.entityType);
 
           if (isNewItemType) {
-            const hasDimensions =
-              typeof item.data?.width === "number" &&
-              typeof item.data?.height === "number";
-            const isTransforming =
-              transform.transformState?.isTransforming &&
-              selectedIds.includes(item.id);
+            const hasDimensions = typeof item.data?.width === 'number' && typeof item.data?.height === 'number';
+            const isTransforming = transform.transformState?.isTransforming && selectedIds.includes(item.id);
 
             // Render new item types with CanvasItemRenderer
             return (
@@ -434,17 +413,17 @@ export function CanvasWorkspace({
                 key={item.id}
                 data-canvas-item={item.entityType}
                 style={{
-                  position: "absolute",
+                  position: 'absolute',
                   left: item.x,
                   top: item.y,
                   width: hasDimensions ? item.data.width : undefined,
                   height: hasDimensions ? item.data.height : undefined,
                   transform: `rotate(${item.rotation || 0}deg)`,
-                  transformOrigin: "center center",
+                  transformOrigin: 'center center',
                   opacity: shouldBeTransparent ? 0 : item.locked ? 0.75 : 1,
-                  transition: isTransforming ? "none" : "opacity 0.2s",
+                  transition: isTransforming ? 'none' : 'opacity 0.2s',
                   zIndex: isItemSelected ? 10 : 1,
-                  cursor: item.locked ? "not-allowed" : "move",
+                  cursor: item.locked ? 'not-allowed' : 'move',
                 }}
                 onMouseDown={(e) => {
                   // Don't allow moving locked items
@@ -455,8 +434,7 @@ export function CanvasWorkspace({
 
                   // Check if this might be a double-click (within 300ms of last click)
                   const now = Date.now();
-                  const lastClick =
-                    (e.currentTarget as any)._lastClickTime || 0;
+                  const lastClick = (e.currentTarget as any)._lastClickTime || 0;
                   const timeSinceLastClick = now - lastClick;
                   (e.currentTarget as any)._lastClickTime = now;
 
@@ -467,7 +445,7 @@ export function CanvasWorkspace({
                   }
 
                   e.stopPropagation();
-                  transform.startTransform(e, item, "move", null);
+                  transform.startTransform(e, item, 'move', null);
                 }}
                 onDoubleClick={(e) => {
                   // Don't prevent propagation - let it reach ShapeRenderer
@@ -476,9 +454,7 @@ export function CanvasWorkspace({
                   e.stopPropagation();
                   let ids = [item.id];
                   if (item.groupId) {
-                    ids = items
-                      .filter((it) => it.groupId === item.groupId)
-                      .map((it) => it.id);
+                    ids = items.filter((it) => it.groupId === item.groupId).map((it) => it.id);
                   }
                   multiSelect.toggleSelection(ids, e.ctrlKey);
                 }}
@@ -486,34 +462,23 @@ export function CanvasWorkspace({
                 <CanvasItemRenderer
                   item={item}
                   // Disable internal selection if we're showing the TransformLayer
-                  isSelected={
-                    hasDimensions && selectedIds.length === 1
-                      ? false
-                      : isItemSelected
-                  }
+                  isSelected={hasDimensions && selectedIds.length === 1 ? false : isItemSelected}
                   onClick={() => {
                     let ids = [item.id];
                     if (item.groupId) {
-                      ids = items
-                        .filter((it) => it.groupId === item.groupId)
-                        .map((it) => it.id);
+                      ids = items.filter((it) => it.groupId === item.groupId).map((it) => it.id);
                     }
                     multiSelect.toggleSelection(ids, false);
                   }}
                   onUpdate={onItemUpdate}
                 />
-                {isItemSelected &&
-                  selectedIds.length === 1 &&
-                  hasDimensions &&
-                  !item.locked && (
-                    <TransformLayer
-                      item={item}
-                      zoom={canvasTransform?.zoom || 1}
-                      onTransformStart={(e, type, handle) =>
-                        transform.startTransform(e, item, type, handle)
-                      }
-                    />
-                  )}
+                {isItemSelected && selectedIds.length === 1 && hasDimensions && !item.locked && (
+                  <TransformLayer
+                    item={item}
+                    zoom={canvasTransform?.zoom || 1}
+                    onTransformStart={(e, type, handle) => transform.startTransform(e, item, type, handle)}
+                  />
+                )}
               </div>
             );
           }
@@ -529,17 +494,12 @@ export function CanvasWorkspace({
               onClick={(e) => {
                 let ids = [item.id];
                 if (item.groupId) {
-                  ids = items
-                    .filter((it) => it.groupId === item.groupId)
-                    .map((it) => it.id);
+                  ids = items.filter((it) => it.groupId === item.groupId).map((it) => it.id);
                 }
                 multiSelect.toggleSelection(ids, e.ctrlKey);
               }}
               forceTransparent={shouldBeTransparent}
-              comparisonChanges={
-                comparisonResult?.modified.find((m) => m.item.id === item.id)
-                  ?.changes
-              }
+              comparisonChanges={comparisonResult?.modified.find((m) => m.item.id === item.id)?.changes}
             />
           );
         })}
@@ -550,12 +510,8 @@ export function CanvasWorkspace({
             <div className="w-32 h-32 mb-6 rounded-full bg-white/[0.02] border border-white/[0.05] flex items-center justify-center">
               <Layout className="w-10 h-10 text-white/10" />
             </div>
-            <h3 className="text-lg font-medium text-white/40 mb-2">
-              Initialize Canvas
-            </h3>
-            <p className="text-sm text-white/20">
-              Drag components from the sidebar to begin designing
-            </p>
+            <h3 className="text-lg font-medium text-white/40 mb-2">Initialize Canvas</h3>
+            <p className="text-sm text-white/20">Drag components from the sidebar to begin designing</p>
           </div>
         )}
       </div>
@@ -578,6 +534,10 @@ export function CanvasWorkspace({
         onZoomOut={onZoomOut}
         onResetZoom={onResetZoom}
         onToggleTheme={onToggleTheme}
+        iconColor={iconColor}
+        isIconColorOverridden={isIconColorOverridden}
+        onIconColorChange={onIconColorChange}
+        onIconColorReset={onIconColorReset}
         onToggleColorScheme={onToggleColorScheme}
         colorSchemeEnabled={colorSchemeEnabled}
       />

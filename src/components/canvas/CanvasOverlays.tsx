@@ -1,13 +1,14 @@
-import React from "react";
-import { Layout } from "lucide-react";
-import { SnapGuides, SnapGuide } from "./controls/SnapGuides";
-import { SelectionBox } from "./controls/SelectionBox";
-import { MultiSelectIndicator } from "./controls/MultiSelectIndicator";
-import { AxisLockGuide } from "./controls/AxisLockGuide";
-import { ColorSchemeToggle } from "./controls/ColorSchemeToggle";
-import { ThemeToggle } from "./controls/ThemeToggle";
-import { ZoomControls } from "./controls/ZoomControls";
-import { CanvasItem } from "@/lib/types";
+import React from 'react';
+import { Layout } from 'lucide-react';
+import { SnapGuides, SnapGuide } from './controls/SnapGuides';
+import { SelectionBox } from './controls/SelectionBox';
+import { MultiSelectIndicator } from './controls/MultiSelectIndicator';
+import { AxisLockGuide } from './controls/AxisLockGuide';
+import { ColorSchemeToggle } from './controls/ColorSchemeToggle';
+import { ThemeToggle } from './controls/ThemeToggle';
+import { IconColorPicker } from './controls/IconColorPicker';
+import { ZoomControls } from './controls/ZoomControls';
+import { CanvasItem } from '@/lib/types';
 
 interface CanvasOverlaysProps {
   canvasRef: React.RefObject<HTMLDivElement | null>;
@@ -21,7 +22,7 @@ interface CanvasOverlaysProps {
   } | null;
   selectionBox: any;
   selectedIds: string[];
-  lockedAxis?: "x" | "y" | null;
+  lockedAxis?: 'x' | 'y' | null;
   isShiftPressed: boolean;
   // Data props
   items: CanvasItem[];
@@ -33,6 +34,10 @@ interface CanvasOverlaysProps {
   onZoomOut?: () => void;
   onResetZoom?: () => void;
   onToggleTheme?: () => void;
+  iconColor?: string;
+  isIconColorOverridden?: boolean;
+  onIconColorChange?: (color: string) => void;
+  onIconColorReset?: () => void;
   onToggleColorScheme?: () => void;
   onClearItems: () => void;
 }
@@ -55,6 +60,10 @@ export function CanvasOverlays({
   onZoomOut,
   onResetZoom,
   onToggleTheme,
+  iconColor,
+  isIconColorOverridden,
+  onIconColorChange,
+  onIconColorReset,
   onToggleColorScheme,
   onClearItems,
 }: CanvasOverlaysProps) {
@@ -63,10 +72,7 @@ export function CanvasOverlays({
   return (
     <div className="absolute inset-0 pointer-events-none">
       {/* Selection Box */}
-      <SelectionBox
-        box={selectionBox}
-        canvasTransform={canvasTransform ?? undefined}
-      />
+      <SelectionBox box={selectionBox} canvasTransform={canvasTransform ?? undefined} />
 
       {/* Snap Guides */}
       <div className="absolute inset-0 overflow-hidden z-40">
@@ -79,9 +85,7 @@ export function CanvasOverlays({
         <AxisLockGuide
           isActive={isShiftPressed && !!activeDragRect}
           axis={lockedAxis ?? null}
-          position={
-            activeDragRect ? { x: activeDragRect.x, y: activeDragRect.y } : null
-          }
+          position={activeDragRect ? { x: activeDragRect.x, y: activeDragRect.y } : null}
           canvasRect={canvasRef.current?.getBoundingClientRect() ?? null}
         />
       </div>
@@ -96,16 +100,13 @@ export function CanvasOverlays({
           <div
             className="px-3 py-1.5 rounded-lg backdrop-blur-xl shadow-sm border transaction-colors duration-200"
             style={{
-              backgroundColor: "var(--color-surface)",
-              borderColor: "var(--color-border)",
+              backgroundColor: 'var(--color-surface)',
+              borderColor: 'var(--color-border)',
             }}
           >
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)] animate-pulse" />
-              <span
-                className="text-[10px] font-bold uppercase tracking-widest"
-                style={{ color: "var(--color-text)" }}
-              >
+              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-text)' }}>
                 Online
               </span>
             </div>
@@ -114,19 +115,13 @@ export function CanvasOverlays({
           <div
             className="px-3 py-1.5 rounded-lg backdrop-blur-xl shadow-sm border transaction-colors duration-200"
             style={{
-              backgroundColor: "var(--color-surface)",
-              borderColor: "var(--color-border)",
+              backgroundColor: 'var(--color-surface)',
+              borderColor: 'var(--color-border)',
             }}
           >
             <div className="flex items-center gap-2">
-              <Layout
-                className="w-3 h-3"
-                style={{ color: "var(--color-primary)" }}
-              />
-              <span
-                className="text-[10px] font-bold uppercase tracking-widest"
-                style={{ color: "var(--color-text)" }}
-              >
+              <Layout className="w-3 h-3" style={{ color: 'var(--color-primary)' }} />
+              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-text)' }}>
                 {items.length} Assets
               </span>
             </div>
@@ -137,21 +132,15 @@ export function CanvasOverlays({
         <div
           className="px-3 py-1.5 rounded-lg backdrop-blur-xl shadow-sm border self-start transaction-colors duration-200"
           style={{
-            backgroundColor: "var(--color-surface)",
-            borderColor: "var(--color-border)",
+            backgroundColor: 'var(--color-surface)',
+            borderColor: 'var(--color-border)',
           }}
         >
           <div className="flex items-center gap-2">
-            <span
-              className="text-[10px] font-medium"
-              style={{ color: "var(--color-text-secondary)" }}
-            >
+            <span className="text-[10px] font-medium" style={{ color: 'var(--color-text-secondary)' }}>
               Last:
             </span>
-            <span
-              className="text-[10px] font-bold"
-              style={{ color: "var(--color-text)" }}
-            >
+            <span className="text-[10px] font-bold" style={{ color: 'var(--color-text)' }}>
               {debugInfo}
             </span>
           </div>
@@ -167,7 +156,7 @@ export function CanvasOverlays({
             <div
               className="absolute bottom-20 right-6 px-4 py-2 rounded-lg backdrop-blur-md text-xs font-mono flex flex-col gap-1 z-50 pointer-events-auto"
               style={{
-                backgroundColor: "var(--color-background-secondary)",
+                backgroundColor: 'var(--color-background-secondary)',
               }}
             >
               <div className="flex gap-4 justify-between">
@@ -192,8 +181,8 @@ export function CanvasOverlays({
           }}
           className="pointer-events-auto px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-red-500/20 hover:text-red-400"
           style={{
-            backgroundColor: "var(--color-background-secondary)",
-            color: "var(--color-text-muted)",
+            backgroundColor: 'var(--color-background-secondary)',
+            color: 'var(--color-text-muted)',
           }}
         >
           Clear Workspace
@@ -214,12 +203,7 @@ export function CanvasOverlays({
         )}
 
         {/* Color Scheme Toggle */}
-        {onToggleColorScheme && (
-          <ColorSchemeToggle
-            enabled={colorSchemeEnabled}
-            onToggle={onToggleColorScheme}
-          />
-        )}
+        {onToggleColorScheme && <ColorSchemeToggle enabled={colorSchemeEnabled} onToggle={onToggleColorScheme} />}
 
         {/* Theme Toggle */}
         {onToggleTheme && (
@@ -230,6 +214,16 @@ export function CanvasOverlays({
               className="relative bottom-auto right-auto shadow-lg pointer-events-auto"
             />
           </div>
+        )}
+
+        {/* Icon Color Picker */}
+        {onIconColorChange && iconColor && (
+          <IconColorPicker
+            value={iconColor}
+            isOverridden={isIconColorOverridden}
+            onChange={onIconColorChange}
+            onReset={onIconColorReset}
+          />
         )}
       </div>
     </div>

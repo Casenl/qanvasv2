@@ -1,117 +1,127 @@
 export interface ThemeColors {
-    // Primary brand color
-    primary: string;
-    primaryHover: string;
-    primaryActive: string;
+  // Primary brand color
+  primary: string;
+  primaryHover: string;
+  primaryActive: string;
 
-    // Secondary accent color
-    secondary: string;
-    secondaryHover: string;
+  // Secondary accent color
+  secondary: string;
+  secondaryHover: string;
 
-    // Supporting colors
-    success: string;
-    warning: string;
-    danger: string;
+  // Supporting colors
+  success: string;
+  warning: string;
+  danger: string;
 
-    // Background colors
-    background: string;
-    backgroundSecondary: string;
-    backgroundTertiary: string;
+  // Background colors
+  background: string;
+  backgroundSecondary: string;
+  backgroundTertiary: string;
 
-    // Surface colors (cards, panels)
-    surface: string;
-    surfaceHover: string;
+  // Surface colors (cards, panels)
+  surface: string;
+  surfaceHover: string;
 
-    // Text colors
-    text: string;
-    textSecondary: string;
-    textMuted: string;
+  // Text colors
+  text: string;
+  textSecondary: string;
+  textMuted: string;
 
-    // Border colors
-    border: string;
-    borderHover: string;
+  // Border colors
+  border: string;
+  borderHover: string;
+
+  // Default color for vector (lucide) UI icons. Central knob — a user override
+  // (localStorage) can replace it at runtime via useTheme().setIconColor().
+  icon: string;
 }
 
 export interface Theme {
-    name: 'light' | 'dark';
-    colors: ThemeColors;
+  name: 'light' | 'dark';
+  colors: ThemeColors;
 }
 
 export const darkTheme: Theme = {
-    name: 'dark',
-    colors: {
-        // Primary: Blue
-        primary: '#3b82f6',
-        primaryHover: '#2563eb',
-        primaryActive: '#1d4ed8',
+  name: 'dark',
+  colors: {
+    // Primary: Blue
+    primary: '#3b82f6',
+    primaryHover: '#2563eb',
+    primaryActive: '#1d4ed8',
 
-        // Secondary: Purple
-        secondary: '#8b5cf6',
-        secondaryHover: '#7c3aed',
+    // Secondary: Purple
+    secondary: '#8b5cf6',
+    secondaryHover: '#7c3aed',
 
-        // Supporting
-        success: '#10b981',
-        warning: '#f59e0b',
-        danger: '#ef4444',
+    // Supporting
+    success: '#10b981',
+    warning: '#f59e0b',
+    danger: '#ef4444',
 
-        // Backgrounds
-        background: '#0a0a0a',
-        backgroundSecondary: '#171717',
-        backgroundTertiary: '#262626',
+    // Backgrounds
+    background: '#0a0a0a',
+    backgroundSecondary: '#171717',
+    backgroundTertiary: '#262626',
 
-        // Surfaces
-        surface: '#1f1f1f',
-        surfaceHover: '#2a2a2a',
+    // Surfaces
+    surface: '#1f1f1f',
+    surfaceHover: '#2a2a2a',
 
-        // Text
-        text: '#ffffff',
-        textSecondary: '#d4d4d4',
-        textMuted: '#737373',
+    // Text
+    text: '#ffffff',
+    textSecondary: '#d4d4d4',
+    textMuted: '#737373',
 
-        // Borders
-        border: '#404040',
-        borderHover: '#525252',
-    }
+    // Borders
+    border: '#404040',
+    borderHover: '#525252',
+
+    // Icons
+    icon: '#a3a3a3',
+  },
 };
 
 export const lightTheme: Theme = {
-    name: 'light',
-    colors: {
-        // Primary: Blue
-        primary: '#2563eb',
-        primaryHover: '#1d4ed8',
-        primaryActive: '#1e40af',
+  name: 'light',
+  colors: {
+    // Primary: Blue
+    primary: '#2563eb',
+    primaryHover: '#1d4ed8',
+    primaryActive: '#1e40af',
 
-        // Secondary: Purple
-        secondary: '#7c3aed',
-        secondaryHover: '#6d28d9',
+    // Secondary: Purple
+    secondary: '#7c3aed',
+    secondaryHover: '#6d28d9',
 
-        // Supporting
-        success: '#059669',
-        warning: '#d97706',
-        danger: '#dc2626',
+    // Supporting
+    success: '#059669',
+    warning: '#d97706',
+    danger: '#dc2626',
 
-        // Backgrounds
-        background: '#ffffff',
-        backgroundSecondary: '#f9fafb',
-        backgroundTertiary: '#f3f4f6',
+    // Backgrounds
+    background: '#ffffff',
+    backgroundSecondary: '#f9fafb',
+    backgroundTertiary: '#f3f4f6',
 
-        // Surfaces
-        surface: '#ffffff',
-        surfaceHover: '#f9fafb',
+    // Surfaces
+    surface: '#ffffff',
+    surfaceHover: '#f9fafb',
 
-        // Text
-        text: '#0a0a0a',
-        textSecondary: '#404040',
-        textMuted: '#737373',
+    // Text
+    text: '#0a0a0a',
+    textSecondary: '#404040',
+    textMuted: '#737373',
 
-        // Borders
-        border: '#e5e7eb',
-        borderHover: '#d1d5db',
-    }
+    // Borders
+    border: '#e5e7eb',
+    borderHover: '#d1d5db',
+
+    // Icons
+    icon: '#525252',
+  },
 };
 
 export const themes = {
-    light: lightTheme,
-    dark: darkTheme
+  light: lightTheme,
+  dark: darkTheme,
 };
