@@ -1,10 +1,21 @@
-import { useState, useCallback, useRef } from "react";
-import { CanvasItem } from "@/lib/types";
-import { calculateSnapGuides, SnapGuide } from "./useSnapGuides";
+import { useState, useCallback, useRef } from 'react';
+import { CanvasItem } from '@/lib/types';
+import { calculateSnapGuides, SnapGuide } from './useSnapGuides';
+
+// Default footprint for items without explicit dimensions (product/vendor/solution cards).
+function getItemDims(item: CanvasItem): { width: number; height: number } {
+  if (item.data && typeof item.data.width === 'number') {
+    return {
+      width: item.data.width,
+      height: typeof item.data.height === 'number' ? item.data.height : item.data.width,
+    };
+  }
+  return { width: 300, height: 172 };
+}
 
 interface TransformState {
   isTransforming: boolean;
-  type: "resize" | "rotate" | "move";
+  type: 'resize' | 'rotate' | 'move';
   handle: string | null; // 'nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w', 'rotate'
   startX: number;
   startY: number;
@@ -18,6 +29,16 @@ interface TransformState {
   initialSelections: Record<string, { x: number; y: number }>;
   duplicatedItems?: CanvasItem[]; // Items created during Ctrl+Shift+drag
   isDuplicating?: boolean; // Flag to track if we're in duplication mode
+  // --- Group (multi-select) transform state ---
+  isGroup?: boolean;
+  groupCenterCanvasX?: number; // group center in canvas coords (rotation pivot)
+  groupCenterCanvasY?: number;
+  anchorX?: number; // resize anchor (opposite corner) in canvas coords
+  anchorY?: number;
+  startCornerX?: number; // dragged corner start position in canvas coords
+  startCornerY?: number;
+  // Initial full state of every member of the group transform
+  initialFull?: Record<string, { x: number; y: number; width: number; height: number; rotation: number }>;
 }
 
 interface UseTransformProps {
@@ -47,33 +68,22 @@ export function useTransform({
   pan,
   canvasRef,
 }: UseTransformProps) {
-  const [transformState, setTransformState] = useState<TransformState | null>(
-    null,
-  );
-  const [lockedAxis, setLockedAxis] = useState<"x" | "y" | null>(null);
+  const [transformState, setTransformState] = useState<TransformState | null>(null);
+  const [lockedAxis, setLockedAxis] = useState<'x' | 'y' | null>(null);
   const activeItemRef = useRef<CanvasItem | null>(null);
 
   const startTransform = useCallback(
-    (
-      e: React.MouseEvent,
-      item: CanvasItem,
-      type: "resize" | "rotate" | "move",
-      handle: string | null,
-    ) => {
+    (e: React.MouseEvent, item: CanvasItem, type: 'resize' | 'rotate' | 'move', handle: string | null) => {
       // Don't allow transforming locked items
       if (item.locked) return;
 
       e.stopPropagation();
       // Don't prevent default for move, so click events can still fire if no drag occurs
-      if (type !== "move") {
+      if (type !== 'move') {
         e.preventDefault();
       }
 
-      if (
-        type === "resize" &&
-        (!item.data || typeof item.data.width !== "number")
-      )
-        return;
+      if (type === 'resize' && (!item.data || typeof item.data.width !== 'number')) return;
 
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
@@ -121,10 +131,7 @@ export function useTransform({
       const containedItemsToMove = new Set<string>();
       movingIds.forEach((id) => {
         const frameItem = items.find((i) => i.id === id);
-        if (
-          frameItem?.entityType === "frame" &&
-          frameItem.data?.containedItemIds
-        ) {
+        if (frameItem?.entityType === 'frame' && frameItem.data?.containedItemIds) {
           frameItem.data.containedItemIds.forEach((containedId: string) => {
             containedItemsToMove.add(containedId);
           });
@@ -157,12 +164,173 @@ export function useTransform({
       activeItemRef.current = item;
       onTransformStart?.();
     },
-    [zoom, pan, canvasRef, items, selectedIds, onTransformStart],
+    [zoom, pan, canvasRef, items, selectedIds, onTransformStart]
+  );
+
+  // Start a rigid-body transform (rotate / proportional resize) of the whole
+  // multi-selection from the group bounding-box handles.
+  const startGroupTransform = useCallback(
+    (e: React.MouseEvent, type: 'resize' | 'rotate', handle: string) => {
+      e.stopPropagation();
+      e.preventDefault();
+
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      // Expand selection to whole groups + frame-contained items.
+      const movingIds = new Set<string>(selectedIds);
+      const involvedGroups = new Set<string>();
+      items.forEach((it) => {
+        if (movingIds.has(it.id) && it.groupId) involvedGroups.add(it.groupId);
+      });
+      if (involvedGroups.size > 0) {
+        items.forEach((it) => {
+          if (it.groupId && involvedGroups.has(it.groupId)) movingIds.add(it.id);
+        });
+      }
+      movingIds.forEach((id) => {
+        const fr = items.find((i) => i.id === id);
+        if (fr?.entityType === 'frame' && fr.data?.containedItemIds) {
+          fr.data.containedItemIds.forEach((c: string) => movingIds.add(c));
+        }
+      });
+
+      const movers = items.filter((it) => movingIds.has(it.id) && !it.locked);
+      if (movers.length === 0) return;
+
+      // Axis-aligned bounding box of the movers (canvas coords).
+      let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
+      const initialFull: TransformState['initialFull'] = {};
+      movers.forEach((it) => {
+        const { width, height } = getItemDims(it);
+        initialFull![it.id] = { x: it.x, y: it.y, width, height, rotation: it.rotation || 0 };
+        minX = Math.min(minX, it.x);
+        minY = Math.min(minY, it.y);
+        maxX = Math.max(maxX, it.x + width);
+        maxY = Math.max(maxY, it.y + height);
+      });
+
+      const gcx = (minX + maxX) / 2;
+      const gcy = (minY + maxY) / 2;
+
+      // Resize anchor = corner opposite the dragged handle.
+      const corners: Record<string, { x: number; y: number }> = {
+        nw: { x: minX, y: minY },
+        ne: { x: maxX, y: minY },
+        se: { x: maxX, y: maxY },
+        sw: { x: minX, y: maxY },
+      };
+      const opposite: Record<string, string> = { nw: 'se', ne: 'sw', se: 'nw', sw: 'ne' };
+      const anchor = type === 'resize' ? corners[opposite[handle]] : { x: gcx, y: gcy };
+      const startCorner = type === 'resize' ? corners[handle] : { x: maxX, y: maxY };
+
+      setTransformState({
+        isTransforming: true,
+        type,
+        handle,
+        startX: e.clientX,
+        startY: e.clientY,
+        startItemX: 0,
+        startItemY: 0,
+        startWidth: 0,
+        startHeight: 0,
+        startRotation: 0,
+        // group center in SCREEN coords (for rotate atan2)
+        centerX: gcx * zoom + pan.x + rect.left,
+        centerY: gcy * zoom + pan.y + rect.top,
+        initialSelections: {},
+        isGroup: true,
+        groupCenterCanvasX: gcx,
+        groupCenterCanvasY: gcy,
+        anchorX: anchor.x,
+        anchorY: anchor.y,
+        startCornerX: startCorner.x,
+        startCornerY: startCorner.y,
+        initialFull,
+      });
+
+      activeItemRef.current = null;
+      onTransformStart?.();
+    },
+    [items, selectedIds, zoom, pan, canvasRef, onTransformStart]
   );
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (!transformState || !activeItemRef.current) return;
+      if (!transformState) return;
+
+      // --- Group (multi-select) rigid-body transform ---
+      if (transformState.isGroup) {
+        const {
+          type,
+          startX,
+          startY,
+          centerX,
+          centerY,
+          groupCenterCanvasX = 0,
+          groupCenterCanvasY = 0,
+          anchorX = 0,
+          anchorY = 0,
+          startCornerX = 0,
+          startCornerY = 0,
+          initialFull,
+        } = transformState;
+        if (!initialFull) return;
+
+        if (type === 'rotate') {
+          const startAngle = Math.atan2(startY - centerY, startX - centerX);
+          const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+          let deltaAngle = angle - startAngle;
+          let deltaDegrees = deltaAngle * (180 / Math.PI);
+          if (e.shiftKey) {
+            deltaDegrees = Math.round(deltaDegrees / 15) * 15;
+            deltaAngle = (deltaDegrees * Math.PI) / 180;
+          }
+          const cos = Math.cos(deltaAngle);
+          const sin = Math.sin(deltaAngle);
+          Object.entries(initialFull).forEach(([id, init]) => {
+            const cx0 = init.x + init.width / 2;
+            const cy0 = init.y + init.height / 2;
+            const dx = cx0 - groupCenterCanvasX;
+            const dy = cy0 - groupCenterCanvasY;
+            const ncx = groupCenterCanvasX + dx * cos - dy * sin;
+            const ncy = groupCenterCanvasY + dx * sin + dy * cos;
+            onUpdate(id, {
+              x: ncx - init.width / 2,
+              y: ncy - init.height / 2,
+              rotation: init.rotation + deltaDegrees,
+            });
+          });
+        } else if (type === 'resize') {
+          const dX = (e.clientX - startX) / zoom;
+          const dY = (e.clientY - startY) / zoom;
+          const oldVecX = startCornerX - anchorX;
+          const oldVecY = startCornerY - anchorY;
+          const oldDist = Math.hypot(oldVecX, oldVecY) || 1;
+          const newDist = Math.hypot(oldVecX + dX, oldVecY + dY);
+          const scale = Math.max(0.05, newDist / oldDist);
+          Object.entries(initialFull).forEach(([id, init]) => {
+            const nx = anchorX + (init.x - anchorX) * scale;
+            const ny = anchorY + (init.y - anchorY) * scale;
+            const item = items.find((i) => i.id === id);
+            if (item?.data && typeof item.data.width === 'number') {
+              onUpdate(id, {
+                x: nx,
+                y: ny,
+                data: { ...item.data, width: init.width * scale, height: init.height * scale },
+              });
+            } else {
+              onUpdate(id, { x: nx, y: ny });
+            }
+          });
+        }
+        return;
+      }
+
+      if (!activeItemRef.current) return;
 
       const {
         type,
@@ -182,13 +350,12 @@ export function useTransform({
       const deltaX = (e.clientX - startX) / zoom;
       const deltaY = (e.clientY - startY) / zoom;
 
-      if (type === "move") {
+      if (type === 'move') {
         let dx = deltaX;
         let dy = deltaY;
 
         // Check if we should duplicate (Ctrl+Shift held and not already duplicating)
-        const shouldDuplicate =
-          e.ctrlKey && e.shiftKey && !transformState.isDuplicating && onItemAdd;
+        const shouldDuplicate = e.ctrlKey && e.shiftKey && !transformState.isDuplicating && onItemAdd;
 
         // If we should duplicate and haven't yet, create duplicates
         if (shouldDuplicate) {
@@ -220,19 +387,17 @@ export function useTransform({
                   // Update initialSelections to point to duplicates
                   initialSelections: duplicatedItems.reduce(
                     (acc, item, index) => {
-                      const originalId = Object.keys(initialSelections || {})[
-                        index
-                      ];
+                      const originalId = Object.keys(initialSelections || {})[index];
                       const originalPos = initialSelections?.[originalId];
                       if (originalPos) {
                         acc[item.id] = originalPos;
                       }
                       return acc;
                     },
-                    {} as Record<string, { x: number; y: number }>,
+                    {} as Record<string, { x: number; y: number }>
                   ),
                 }
-              : prev,
+              : prev
           );
 
           return; // Skip this frame, let duplicates be created first
@@ -242,10 +407,10 @@ export function useTransform({
         if (e.shiftKey && !e.ctrlKey) {
           if (Math.abs(dx) >= Math.abs(dy)) {
             dy = 0;
-            setLockedAxis("x");
+            setLockedAxis('x');
           } else {
             dx = 0;
-            setLockedAxis("y");
+            setLockedAxis('y');
           }
         } else {
           setLockedAxis(null);
@@ -261,7 +426,7 @@ export function useTransform({
           const snapResult = calculateSnapGuides(
             activeItemRef.current.id,
             { x: newX, y: newY, width: startWidth, height: startHeight },
-            items,
+            items
           );
           finalActiveX = snapResult.x;
           finalActiveY = snapResult.y;
@@ -294,7 +459,7 @@ export function useTransform({
             y: finalActiveY,
           });
         }
-      } else if (type === "rotate") {
+      } else if (type === 'rotate') {
         // Calculate new angle based on mouse position relative to center
         const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
         // Let's simplified approach: Calculate delta angle
@@ -313,7 +478,7 @@ export function useTransform({
         onUpdate(activeItemRef.current.id, {
           rotation: newRotation,
         });
-      } else if (type === "resize") {
+      } else if (type === 'resize') {
         let newX = startItemX;
         let newY = startItemY;
         let newWidth = startWidth;
@@ -324,13 +489,13 @@ export function useTransform({
         const preserveAspectRatio = e.shiftKey;
 
         // Handle logic
-        if (handle?.includes("e")) {
+        if (handle?.includes('e')) {
           newWidth = Math.max(10, startWidth + deltaX);
           if (preserveAspectRatio) {
             newHeight = newWidth / aspectRatio;
           }
         }
-        if (handle?.includes("w")) {
+        if (handle?.includes('w')) {
           const maxDelta = startWidth - 10;
           const appliedDelta = Math.min(deltaX, maxDelta);
           newWidth = startWidth - appliedDelta;
@@ -339,13 +504,13 @@ export function useTransform({
             newHeight = newWidth / aspectRatio;
           }
         }
-        if (handle?.includes("s")) {
+        if (handle?.includes('s')) {
           newHeight = Math.max(10, startHeight + deltaY);
           if (preserveAspectRatio) {
             newWidth = newHeight * aspectRatio;
           }
         }
-        if (handle?.includes("n")) {
+        if (handle?.includes('n')) {
           const maxDelta = startHeight - 10;
           const appliedDelta = Math.min(deltaY, maxDelta);
           newHeight = startHeight - appliedDelta;
@@ -359,20 +524,20 @@ export function useTransform({
         if (
           preserveAspectRatio &&
           handle &&
-          (handle.includes("n") || handle.includes("s")) &&
-          (handle.includes("e") || handle.includes("w"))
+          (handle.includes('n') || handle.includes('s')) &&
+          (handle.includes('e') || handle.includes('w'))
         ) {
           // Use whichever dimension changed more
           if (Math.abs(deltaX) > Math.abs(deltaY)) {
             newHeight = newWidth / aspectRatio;
             // Adjust Y position for north handles
-            if (handle.includes("n")) {
+            if (handle.includes('n')) {
               newY = startItemY + (startHeight - newHeight);
             }
           } else {
             newWidth = newHeight * aspectRatio;
             // Adjust X position for west handles
-            if (handle.includes("w")) {
+            if (handle.includes('w')) {
               newX = startItemX + (startWidth - newWidth);
             }
           }
@@ -394,7 +559,7 @@ export function useTransform({
         });
       }
     },
-    [transformState, zoom, onUpdate, onItemAdd, items, snapEnabled, onSnap],
+    [transformState, zoom, onUpdate, onItemAdd, items, snapEnabled, onSnap]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -412,6 +577,7 @@ export function useTransform({
   return {
     transformState,
     startTransform,
+    startGroupTransform,
     handleMouseMove,
     handleMouseUp,
     lockedAxis,

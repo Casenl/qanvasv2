@@ -11,7 +11,7 @@ import { useTransform } from '@/hooks/useTransform';
 import { useCanvasDrop } from '@/hooks/useCanvasDrop';
 import { DrawingModeReturn } from '@/hooks/useDrawingMode';
 import { CanvasOverlays } from './CanvasOverlays';
-import { MultiSelectBoundingBox } from './controls/MultiSelectBoundingBox';
+import { MultiSelectTransformBox } from './controls/MultiSelectTransformBox';
 import { SnapGuide } from './controls/SnapGuides';
 import { DrawingPreview } from './controls/DrawingPreview';
 
@@ -374,8 +374,13 @@ export function CanvasWorkspace({
           transition: 'none',
         }}
       >
-        {/* Multi-Select Bounding Box */}
-        <MultiSelectBoundingBox items={items} selectedIds={selectedIds} zoom={canvasTransform?.zoom || 1} />
+        {/* Multi-Select / Group Transform Box (rotate + resize as one) */}
+        <MultiSelectTransformBox
+          items={items}
+          selectedIds={selectedIds}
+          zoom={canvasTransform?.zoom || 1}
+          onStartTransform={transform.startGroupTransform}
+        />
 
         {/* Drawing Preview (pen, line, arrow) */}
         {drawingMode?.drawingState && (
