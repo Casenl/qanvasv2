@@ -16,6 +16,7 @@ interface CanvasItemRendererProps {
     isSelected: boolean;
     onClick?: () => void;
     onUpdate?: (itemId: string, newData: any) => void;
+    isDrawingMode?: boolean; // True when a drawing tool is active
 }
 
 /**
@@ -27,7 +28,7 @@ interface CanvasItemRendererProps {
  * - Handle item updates
  * - Provide consistent interface for all item types
  */
-export function CanvasItemRenderer({ item, isSelected, onClick, onUpdate }: CanvasItemRendererProps) {
+export function CanvasItemRenderer({ item, isSelected, onClick, onUpdate, isDrawingMode }: CanvasItemRendererProps) {
     const handleUpdate = (newData: any) => {
         if (onUpdate) {
             // Wrap the data update in a data property
@@ -73,6 +74,7 @@ export function CanvasItemRenderer({ item, isSelected, onClick, onUpdate }: Canv
                     isSelected={isSelected}
                     onClick={onClick}
                     onUpdate={handleUpdate}
+                    isDrawingMode={isDrawingMode}
                 />
             );
 

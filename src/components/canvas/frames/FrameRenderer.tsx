@@ -8,6 +8,7 @@ interface FrameRendererProps {
     isSelected?: boolean;
     onClick?: () => void;
     onUpdate?: (newData: Partial<FrameData>) => void;
+    isDrawingMode?: boolean; // True when a drawing tool is active
 }
 
 /**
@@ -18,9 +19,10 @@ interface FrameRendererProps {
  * - Customizable background color
  * - Shows count of contained items
  * - Visual selection state
+ * - Acts as background when not selected or when drawing mode is active
  */
-export function FrameRenderer({ data, isSelected = false, onClick, onUpdate }: FrameRendererProps) {
-    const { width, height, title, color, containedItemIds = [] } = data;
+export function FrameRenderer({ data, isSelected = false, onClick, onUpdate, isDrawingMode = false }: FrameRendererProps) {
+    const { width, height, title, color, containedItemIds = [], cornerRadius = 0 } = data;
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [titleValue, setTitleValue] = useState(title);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -44,16 +46,27 @@ export function FrameRenderer({ data, isSelected = false, onClick, onUpdate }: F
     return (
         <div
             data-canvas-item="frame"
-            onClick={onClick}
+            onClick={(e) => {
+                // Don't select frame when in drawing mode
+                if (isDrawingMode) {
+                    e.stopPropagation();
+                    return;
+                }
+                onClick?.();
+            }}
             style={{
                 width: width || 300,
                 height: height || 300,
-                border: '2px dashed #9ca3af',
-                backgroundColor: color || 'rgba(243, 244, 246, 0.2)',
+                border: isSelected ? '2px solid #3b82f6' : '2px solid #000000',
+                backgroundColor: color || '#ffffff',
+                borderRadius: `${cornerRadius || 0}px`,
                 position: 'relative',
                 transition: 'all 0.2s',
-                pointerEvents: 'auto', // Ensure clicks are caught
-                ...(isSelected ? { borderColor: '#3b82f6', borderStyle: 'solid' } : {})
+                // Frame pointer-events logic:
+                // 1. Drawing mode active → ALWAYS 'none' (highest priority)
+                // 2. Frame selected → 'auto' (can be moved)
+                // 3. Frame not selected → 'none' (acts as background)
+                pointerEvents: isDrawingMode ? 'none' : (isSelected ? 'auto' : 'none')
             }}
         >
             {/* Title Bar */}
@@ -72,10 +85,16 @@ export function FrameRenderer({ data, isSelected = false, onClick, onUpdate }: F
                     whiteSpace: 'nowrap',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '6px',
+                    // Title bar is interactive when NOT in drawing mode
+                    pointerEvents: isDrawingMode ? 'none' : 'auto'
                 }}
                 onClick={(e) => {
-                    // Allow selecting via title click
+                    // Don't select frame when in drawing mode
+                    if (isDrawingMode) {
+                        e.stopPropagation();
+                        return;
+                    }
                     onClick?.();
                 }}
                 onDoubleClick={(e) => {

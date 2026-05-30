@@ -98,9 +98,20 @@ export function useTransform({ items, selectedIds, snapEnabled = true, onSnap, o
             });
         }
 
-        // 5. Capture initial positions
+        // 5. Add contained items of frames to moving set
+        const containedItemsToMove = new Set<string>();
+        movingIds.forEach(id => {
+            const frameItem = items.find(i => i.id === id);
+            if (frameItem?.entityType === 'frame' && frameItem.data?.containedItemIds) {
+                frameItem.data.containedItemIds.forEach((containedId: string) => {
+                    containedItemsToMove.add(containedId);
+                });
+            }
+        });
+
+        // 6. Capture initial positions (including contained items)
         items.forEach(it => {
-            if (movingIds.has(it.id)) {
+            if (movingIds.has(it.id) || containedItemsToMove.has(it.id)) {
                 initialSelections[it.id] = { x: it.x, y: it.y };
             }
         });
@@ -221,13 +232,14 @@ export function useTransform({ items, selectedIds, snapEnabled = true, onSnap, o
             const moveDeltaX = finalActiveX - startItemX;
             const moveDeltaY = finalActiveY - startItemY;
 
-            // Apply to all selected items (or duplicates if duplicating)
+            // Apply to all items in initialSelections (includes selected items + contained items)
             const selectionsToMove = transformState.isDuplicating && transformState.duplicatedItems
                 ? transformState.initialSelections // These now point to duplicates
                 : initialSelections;
 
             if (selectionsToMove) {
                 Object.entries(selectionsToMove).forEach(([id, startPos]) => {
+                    // Update the item position using stored start position
                     onUpdate(id, {
                         x: startPos.x + moveDeltaX,
                         y: startPos.y + moveDeltaY

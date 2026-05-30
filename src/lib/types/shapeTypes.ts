@@ -93,6 +93,9 @@ export interface PathData {
     strokeStyle?: 'solid' | 'dashed' | 'dotted';
     opacity: number;
     smoothing?: number; // 0-1, how smooth the curve is
+    // Bounding box (calculated from points)
+    width: number;
+    height: number;
     // Label
     label?: string;
     labelColor?: string;

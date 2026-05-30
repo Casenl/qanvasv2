@@ -23,11 +23,17 @@ export interface ContextMenuAction {
     disabled?: boolean;
 }
 
+export interface ContextMenuSeparator {
+    type: 'separator';
+}
+
+export type ContextMenuItem = ContextMenuAction | ContextMenuSeparator;
+
 interface ContextMenuProps {
     x: number;
     y: number;
     onClose: () => void;
-    actions: ContextMenuAction[];
+    actions: ContextMenuItem[];
     selectedCount: number;
 }
 
@@ -160,58 +166,73 @@ export function ContextMenu({ x, y, onClose, actions, selectedCount }: ContextMe
 
             {/* List Actions */}
             <div className="p-1 w-full flex flex-col">
-                {actions.filter(a => a.id !== 'duplicate').map((action) => (
-                    <button
-                        key={action.id}
-                        onClick={() => {
-                            if (!action.disabled) {
-                                action.action();
-                                onClose();
-                            }
-                        }}
-                        disabled={action.disabled}
-                        className="w-full px-3 py-2 text-left text-sm rounded-lg flex items-center justify-between group transition-colors"
-                        style={{
-                            color: action.disabled
-                                ? 'var(--color-text-muted)'
-                                : action.danger
-                                    ? 'var(--color-danger)'
-                                    : 'var(--color-text)',
-                            opacity: action.disabled ? 0.4 : 1,
-                            cursor: action.disabled ? 'not-allowed' : 'pointer'
-                        }}
-                        onMouseEnter={(e) => {
-                            if (!action.disabled) {
-                                if (action.danger) {
-                                    e.currentTarget.style.backgroundColor = 'var(--color-danger)';
-                                    e.currentTarget.style.opacity = '0.2';
-                                } else {
-                                    e.currentTarget.style.backgroundColor = 'var(--color-background-secondary)';
-                                }
-                            }
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.opacity = action.disabled ? '0.4' : '1';
-                        }}
-                    >
-                        <div className="flex items-center gap-3">
-                            {action.icon}
-                            <span>{action.label}</span>
-                        </div>
-                        {action.shortcut && (
-                            <span
-                                className="text-[10px] font-mono"
-                                style={{
-                                    color: 'var(--color-text-muted)',
-                                    opacity: 0.6
-                                }}
-                            >
-                                {action.shortcut}
-                            </span>
-                        )}
-                    </button>
-                ))}
+                {actions
+                    .filter((item): item is ContextMenuAction => 'id' in item && item.id !== 'duplicate')
+                    .map((action, index) => {
+                        // Check if previous item is a separator
+                        const prevItem = actions[actions.indexOf(action) - 1];
+                        const showSeparatorBefore = prevItem && 'type' in prevItem && prevItem.type === 'separator';
+
+                        return (
+                            <div key={action.id}>
+                                {showSeparatorBefore && (
+                                    <div
+                                        className="my-1 h-px"
+                                        style={{ backgroundColor: 'var(--color-border)' }}
+                                    />
+                                )}
+                                <button
+                                    onClick={() => {
+                                        if (!action.disabled) {
+                                            action.action();
+                                            onClose();
+                                        }
+                                    }}
+                                    disabled={action.disabled}
+                                    className="w-full px-3 py-2 text-left text-sm rounded-lg flex items-center justify-between group transition-colors"
+                                    style={{
+                                        color: action.disabled
+                                            ? 'var(--color-text-muted)'
+                                            : action.danger
+                                                ? 'var(--color-danger)'
+                                                : 'var(--color-text)',
+                                        opacity: action.disabled ? 0.4 : 1,
+                                        cursor: action.disabled ? 'not-allowed' : 'pointer'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!action.disabled) {
+                                            if (action.danger) {
+                                                e.currentTarget.style.backgroundColor = 'var(--color-danger)';
+                                                e.currentTarget.style.opacity = '0.2';
+                                            } else {
+                                                e.currentTarget.style.backgroundColor = 'var(--color-background-secondary)';
+                                            }
+                                        }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                        e.currentTarget.style.opacity = action.disabled ? '0.4' : '1';
+                                    }}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        {action.icon}
+                                        <span>{action.label}</span>
+                                    </div>
+                                    {action.shortcut && (
+                                        <span
+                                            className="text-[10px] font-mono"
+                                            style={{
+                                                color: 'var(--color-text-muted)',
+                                                opacity: 0.6
+                                            }}
+                                        >
+                                            {action.shortcut}
+                                        </span>
+                                    )}
+                                </button>
+                            </div>
+                        );
+                    })}
             </div>
         </div>
     );

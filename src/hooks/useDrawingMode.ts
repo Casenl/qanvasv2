@@ -142,27 +142,53 @@ export function useDrawingMode(config: DrawingModeConfig) {
      * Create a path item (pen tool)
      */
     const createPathItem = useCallback((x: number, y: number, points: { x: number; y: number }[]): CanvasItem => {
-        // Generate SVG path string from points
-        const pathString = points.length > 0
-            ? `M ${points.map(p => `${p.x},${p.y}`).join(' L ')}`
+        // Calculate bounding box from absolute points
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+
+        if (points.length > 0) {
+            points.forEach(p => {
+                minX = Math.min(minX, p.x);
+                minY = Math.min(minY, p.y);
+                maxX = Math.max(maxX, p.x);
+                maxY = Math.max(maxY, p.y);
+            });
+        }
+
+        const width = maxX - minX;
+        const height = maxY - minY;
+
+        // Normalize points to be relative to top-left corner (minX, minY)
+        const normalizedPoints = points.map(p => ({
+            x: p.x - minX,
+            y: p.y - minY
+        }));
+
+        // Generate SVG path string from normalized points
+        const pathString = normalizedPoints.length > 0
+            ? `M ${normalizedPoints.map(p => `${p.x},${p.y}`).join(' L ')}`
             : '';
 
         const pathData: PathData = {
-            points,
+            points: normalizedPoints,
             pathString,
             strokeColor: DEFAULT_PATH_STYLE.strokeColor!,
             strokeWidth: DEFAULT_PATH_STYLE.strokeWidth!,
             strokeStyle: DEFAULT_PATH_STYLE.strokeStyle,
             opacity: DEFAULT_PATH_STYLE.opacity!,
-            smoothing: DEFAULT_PATH_STYLE.smoothing
+            smoothing: DEFAULT_PATH_STYLE.smoothing,
+            width,
+            height
         };
 
         return {
             id: generateId('pen'),
             entityId: generateId('pen-entity'),
             entityType: 'pen',
-            x,
-            y,
+            x: minX, // Position at top-left of bounding box
+            y: minY,
             data: pathData,
             locked: false
         };
@@ -176,7 +202,7 @@ export function useDrawingMode(config: DrawingModeConfig) {
             width,
             height,
             title: 'New Frame',
-            color: 'rgba(243, 244, 246, 0.2)',
+            color: '#ffffff',
             containedItemIds: []
         };
 

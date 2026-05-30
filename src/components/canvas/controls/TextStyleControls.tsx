@@ -52,6 +52,7 @@ export function TextStyleControls({
                 value={textColor}
                 onChange={onTextColorChange}
                 label="Text Color"
+                icon={<Type className="w-4 h-4" style={{ color: 'var(--color-text)' }} />}
             />
 
             {/* Font Size */}

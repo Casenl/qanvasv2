@@ -51,6 +51,8 @@ import { useMetricManager } from '@/hooks/useMetricManager';
 import { useToolbar } from '@/hooks/useToolbar';
 import { useDrawingMode } from '@/hooks/useDrawingMode';
 import { useFrameContainment } from '@/hooks/useFrameContainment';
+import { useLayerOperations } from '@/hooks/useLayerOperations';
+import { useFrameExport } from '@/hooks/useFrameExport';
 import { ZoomControls } from '../controls/ZoomControls';
 import { SolutionDialog } from '../dialogs/SolutionDialog';
 import { CanvasConfiguration, DEFAULT_CANVAS_CONFIG } from '@/lib/types/canvasConfig';
@@ -327,6 +329,19 @@ export function CanvasBoard() {
         }
     }, [items, multiSelect.selectedIds, setItems, locking, setDebugInfo]);
 
+    // Layer operations hook (z-order management)
+    const layerOps = useLayerOperations({
+        items,
+        setItems,
+        selectedIds: multiSelect.selectedIds,
+        setDebugInfo
+    });
+
+    // Frame export hook
+    const frameExport = useFrameExport({
+        items,
+        setDebugInfo
+    });
 
     // Sync inherited metrics when canvas config changes
     // This also ADDS new metrics if they're set in canvas config after product was placed
@@ -371,6 +386,10 @@ export function CanvasBoard() {
         onNudgeRight: nudging.nudgeRight,
         onGroup: alignment.group,
         onLock: handleFrameLock,
+        onBringToFront: layerOps.bringToFront,
+        onSendToBack: layerOps.sendToBack,
+        onBringForward: layerOps.bringForward,
+        onSendBackward: layerOps.sendBackward,
         onZoomIn: canvasTransform.zoomIn,
         onZoomOut: canvasTransform.zoomOut,
         onZoomReset: canvasTransform.resetZoom,
@@ -601,7 +620,70 @@ export function CanvasBoard() {
                         x={contextMenuOps.contextMenu.x}
                         y={contextMenuOps.contextMenu.y}
                         onClose={contextMenuOps.closeContextMenu}
-                        actions={contextMenuOps.contextMenuActions}
+                        actions={[
+                            ...contextMenuOps.contextMenuActions.slice(0, 2), // Duplicate, Copy
+                            { type: 'separator' as const },
+                            // Frame export options (only show for single frame selection)
+                            ...(multiSelect.selectedIds.length === 1 &&
+                                items.find(item => item.id === multiSelect.selectedIds[0])?.entityType === 'frame'
+                                ? [
+                                    {
+                                        id: 'export-png',
+                                        label: 'Export as PNG',
+                                        icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
+                                        action: () => frameExport.exportFrameAsPNG(multiSelect.selectedIds[0])
+                                    },
+                                    {
+                                        id: 'export-jpg',
+                                        label: 'Export as JPG',
+                                        icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
+                                        action: () => frameExport.exportFrameAsJPG(multiSelect.selectedIds[0])
+                                    },
+                                    {
+                                        id: 'export-svg',
+                                        label: 'Export as SVG',
+                                        icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
+                                        action: () => frameExport.exportFrameAsSVG(multiSelect.selectedIds[0])
+                                    },
+                                    {
+                                        id: 'export-pdf',
+                                        label: 'Export as PDF',
+                                        icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
+                                        action: () => frameExport.exportFrameAsPDF(multiSelect.selectedIds[0])
+                                    },
+                                    { type: 'separator' as const }
+                                ] : []),
+                            {
+                                id: 'bring-to-front',
+                                label: 'Bring to Front',
+                                icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>,
+                                action: layerOps.bringToFront,
+                                shortcut: 'Ctrl+]'
+                            },
+                            {
+                                id: 'bring-forward',
+                                label: 'Bring Forward',
+                                icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5 5 5M7 17l5-5 5 5" /></svg>,
+                                action: layerOps.bringForward,
+                                shortcut: 'Ctrl+['
+                            },
+                            {
+                                id: 'send-backward',
+                                label: 'Send Backward',
+                                icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 13l-5 5-5-5M17 7l-5 5-5-5" /></svg>,
+                                action: layerOps.sendBackward,
+                                shortcut: 'Ctrl+Shift+['
+                            },
+                            {
+                                id: 'send-to-back',
+                                label: 'Send to Back',
+                                icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>,
+                                action: layerOps.sendToBack,
+                                shortcut: 'Ctrl+Shift+]'
+                            },
+                            { type: 'separator' as const },
+                            ...contextMenuOps.contextMenuActions.slice(2) // Group, Lock, Delete
+                        ]}
                         selectedCount={multiSelect.selectedIds.length}
                     />
                 )}
@@ -674,6 +756,7 @@ export function CanvasBoard() {
                                 // Map properties for Frame renderer
                                 const newItem = { ...item, data: { ...item.data } };
                                 if (property === 'fillColor') newItem.data.color = value;
+                                else if (property === 'cornerRadius') newItem.data.cornerRadius = value;
                                 return newItem;
                             } else if (item.entityType === 'pen') {
                                 // Map properties for Pen (path) renderer - stroke and label properties

@@ -7,6 +7,7 @@ interface ColorPickerProps {
     value: string;
     onChange: (color: string) => void;
     label: string;
+    icon?: React.ReactNode; // Optional custom icon
 }
 
 const PRESET_COLORS = [
@@ -26,7 +27,7 @@ const PRESET_COLORS = [
 
 const CUSTOM_COLORS_KEY = 'qanvas-custom-colors';
 
-export function ColorPicker({ value, onChange, label }: ColorPickerProps) {
+export function ColorPicker({ value, onChange, label, icon }: ColorPickerProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [customColors, setCustomColors] = useState<string[]>([]);
     const [showColorInput, setShowColorInput] = useState(false);
@@ -73,7 +74,7 @@ export function ColorPicker({ value, onChange, label }: ColorPickerProps) {
                     e.currentTarget.style.backgroundColor = 'transparent';
                 }}
             >
-                <Paintbrush className="w-4 h-4" style={{ color: 'var(--color-text)' }} />
+                {icon || <Paintbrush className="w-4 h-4" style={{ color: 'var(--color-text)' }} />}
                 <div
                     className="w-4 h-4 rounded border"
                     style={{

@@ -1,6 +1,6 @@
 # Qanvas - Feature Roadmap & To-Do List
 
-**Last Updated**: January 4, 2026  
+**Last Updated**: January 5, 2026  
 **Status**: Active Development
 
 ---
@@ -99,6 +99,21 @@
 - ✅ **Align/Distribute dropdown menu** (January 4, 2026) - Miro-style compact toolbar
 - ✅ **Text item resize & rotate** (January 4, 2026) - Transform handles for text boxes
 - ✅ **Removed unused controls** (January 4, 2026) - Letter spacing and line height removed for simplicity
+
+### **Frames & Containment** (January 5, 2026)
+- ✅ **Frame tool** - Click-and-drag to create frames
+- ✅ **Frame containment** - Automatic detection of items within frames
+- ✅ **Frame movement** - Items move with frame
+- ✅ **Frame deletion** - Deletes frame + contained items
+- ✅ **Frame copy/paste** - Copies frame + contained items with ID mapping
+- ✅ **Frame duplicate** - Duplicates frame + contained items
+- ✅ **Frame styling** - White background, black border, customizable colors
+- ✅ **Layer operations** - Bring to front, send to back, bring forward, send backward
+- ✅ **Keyboard shortcuts** - Ctrl+] / Ctrl+[ / Ctrl+Shift+] / Ctrl+Shift+[
+- ✅ **Frame export** - Export as PNG, JPG, SVG, PDF
+- ✅ **Export filtering** - Excludes UI elements (handles, overlays)
+- ✅ **Snap exclusion** - Contained items excluded from snap targets
+- ✅ **Z-index management** - Frames always in background
 
 ---
 
@@ -254,8 +269,7 @@
 - ✅ Label styling (for lines/arrows)
 
 **Still To Add**:
-- ⬜ Layer operations (bring to front, send to back)
-- ⬜ Advanced border styles
+- ⬜ Advanced border styles (gradients, patterns)
 
 ---
 

@@ -54,6 +54,10 @@ next-env.d.ts
 Thumbs.db
 Desktop.ini
 
+# Synology (Syncthing-synced folder) metadata
+@eaDir/
+*@SynoEAStream
+
 # Temporary files
 *.tmp
 *.temp

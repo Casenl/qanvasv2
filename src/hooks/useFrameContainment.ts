@@ -29,7 +29,7 @@ export function useFrameContainment(items: CanvasItem[]) {
         // Skip if frame doesn't have dimensions
         if (!frame.data?.width || !frame.data?.height) return false;
 
-        // Get item dimensions (default to 0 if not available)
+        // Get item dimensions (all items now have width/height in data)
         const itemWidth = item.data?.width || 0;
         const itemHeight = item.data?.height || 0;
 

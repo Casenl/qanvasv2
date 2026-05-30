@@ -65,10 +65,20 @@ export function calculateSnapGuides(
     };
 
     // Filter out the dragged item AND all selected items (for multi-select drag)
-    const otherItems = allItems.filter(item =>
-        item.id !== draggedItemId &&
-        !selectedItemIds.includes(item.id)
-    );
+    // Also filter out items contained in selected frames
+    const itemsToExclude = new Set<string>([draggedItemId, ...selectedItemIds]);
+
+    // Add contained items of any selected frames
+    selectedItemIds.forEach(id => {
+        const item = allItems.find(i => i.id === id);
+        if (item?.entityType === 'frame' && item.data?.containedItemIds) {
+            item.data.containedItemIds.forEach((containedId: string) => {
+                itemsToExclude.add(containedId);
+            });
+        }
+    });
+
+    const otherItems = allItems.filter(item => !itemsToExclude.has(item.id));
 
     let snappedX = dragPosition.x;
     let snappedY = dragPosition.y;

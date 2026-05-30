@@ -15,6 +15,10 @@ export interface KeyboardShortcuts {
     onNudgeRight?: () => void;
     onGroup?: () => void;
     onLock?: () => void;
+    onBringToFront?: () => void;
+    onSendToBack?: () => void;
+    onBringForward?: () => void;
+    onSendBackward?: () => void;
     onZoomIn?: () => void;
     onZoomOut?: () => void;
     onZoomReset?: () => void;
@@ -90,6 +94,32 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts, enabled: bool
             if (isModifier && key.toLowerCase() === 'l' && currentShortcuts.onLock && !isInputField) {
                 event.preventDefault();
                 currentShortcuts.onLock();
+                return;
+            }
+
+            // Layer operations
+            // Ctrl + ] (Bring to Front)
+            if (isModifier && !shiftKey && key === ']' && currentShortcuts.onBringToFront && !isInputField) {
+                event.preventDefault();
+                currentShortcuts.onBringToFront();
+                return;
+            }
+            // Ctrl + [ (Bring Forward)
+            if (isModifier && !shiftKey && key === '[' && currentShortcuts.onBringForward && !isInputField) {
+                event.preventDefault();
+                currentShortcuts.onBringForward();
+                return;
+            }
+            // Ctrl + Shift + ] (Send to Back)
+            if (isModifier && shiftKey && key === ']' && currentShortcuts.onSendToBack && !isInputField) {
+                event.preventDefault();
+                currentShortcuts.onSendToBack();
+                return;
+            }
+            // Ctrl + Shift + [ (Send Backward)
+            if (isModifier && shiftKey && key === '[' && currentShortcuts.onSendBackward && !isInputField) {
+                event.preventDefault();
+                currentShortcuts.onSendBackward();
                 return;
             }
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Pen } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import { LineStylePicker } from './LineStylePicker';
 
@@ -34,6 +35,7 @@ export function StrokeControls({
                 value={strokeColor}
                 onChange={onStrokeColorChange}
                 label="Stroke"
+                icon={<Pen className="w-4 h-4" style={{ color: 'var(--color-text)' }} />}
             />
 
             {/* Stroke Width */}
