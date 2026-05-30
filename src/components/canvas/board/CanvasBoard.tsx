@@ -51,12 +51,7 @@ import { SnapshotControls } from "../controls/SnapshotControls";
 import { alignItems, distributeItems } from "@/lib/utils/alignment";
 import { useTheme } from "@/hooks/useTheme";
 import { Layers, AlignLeft, Grid } from "lucide-react"; // Remaining lucide-react imports
-import {
-  PROPOSITIONS,
-  VENDORS,
-  PRODUCTS,
-  SOLUTIONS,
-} from "@/lib/data/mockData";
+import { useCanvasDataSource } from "@/hooks/useCanvasDataSource";
 import { useItemNudging } from "@/hooks/useItemNudging";
 import { useItemLocking } from "@/hooks/useItemLocking";
 import { useAlignment } from "@/hooks/useAlignment";
@@ -100,6 +95,15 @@ const customCollisionStrategy: CollisionDetection = (args) => {
 };
 
 export function CanvasBoard() {
+  // Catalog data source (mock today; Firebase-backed after monorepo absorption — see
+  // useCanvasDataSource). Aliased to the existing uppercase names to avoid churn.
+  const {
+    propositions: PROPOSITIONS,
+    vendors: VENDORS,
+    products: PRODUCTS,
+    solutions: SOLUTIONS,
+  } = useCanvasDataSource();
+
   // State with history for undo/redo
   const history = useHistory<CanvasItem[]>([]);
   const items = history.state;
